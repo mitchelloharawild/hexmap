@@ -9,25 +9,35 @@ tile_allocate(object, tile)
 \arguments{
 \item{object}{An sf object or geometry that was used to be tiled.}
 
-\item{tile}{An sf object produced with the \code{hex_grid()} function.}
+\item{tile}{A vector of tile geometries with one tile per row of \code{object},
+such as those produced by \code{\link[=hex_grid]{hex_grid()}}.}
 }
 \value{
-An sf dataset of hexagon geometries with their original data.
+\code{object} with its geometry replaced by the allocated tiles.
 }
 \description{
-This function will allocate tiles to their original geometries. This currently
-requires a 1:1 mapping of geometries to their tiles.
+Allocates each tile to exactly one of the original geometries, such that
+the total squared distance between each geometry and its tile is minimised.
+This optimal assignment is solved with the Hungarian algorithm via
+\code{\link[clue:solve_LSAP]{clue::solve_LSAP()}}.
+}
+\details{
+Minimising squared (rather than absolute) distance guarantees that no two
+geometries swap their relative position: for any two regions, the
+displacement from one tile to the other never points against the
+displacement between the original regions.
 }
 \examples{
 library(ozmaps)
-library(dplyr)
-australia <- abs_ste \%>\% filter(NAME != "Other Territories")
+library(sf)
+australia <- st_transform(abs_ste, 3577)
+australia <- australia[australia$NAME != "Other Territories", ]
 grid <- hex_grid(australia, n_tiles = 8)
-grid <- tile_allocate(australia, grid)
+hexes <- tile_allocate(australia, grid)
 
 library(ggplot2)
 ggplot() +
   geom_sf(data = australia) +
-  geom_sf(data = grid, aes(fill = NAME), alpha = 0.2)
+  geom_sf(data = hexes, aes(fill = NAME), alpha = 0.5)
 
 }

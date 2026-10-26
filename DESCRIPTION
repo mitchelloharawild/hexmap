@@ -13,21 +13,16 @@ Description: This package takes an sf map object and converts into a hex tile ma
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
-Imports: 
-    dplyr,
-    magrittr,
-    rlang,
-    sf,
-    sp
+Imports:
+    clue,
+    sf
 URL: https://github.com/emitanaka/hexmap,
     https://numbats.github.io/hexmap/
 BugReports: https://github.com/emitanaka/hexmap/issues
-Depends: 
-    R (>= 2.10)
+Depends:
+    R (>= 4.1)
 LazyData: true
-Suggests: 
-    geogrid,
+Suggests:
     ozmaps,
     ggplot2,
     knitr,
@@ -35,3 +30,4 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0

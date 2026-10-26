@@ -2,7 +2,6 @@
 % Please edit documentation in R/hexmap-package.R
 \docType{package}
 \name{hexmap-package}
-\alias{hexmap}
 \alias{hexmap-package}
 \title{hexmap: Convert a map into a hex map}
 \description{
@@ -19,6 +18,11 @@ Useful links:
 }
 \author{
 \strong{Maintainer}: Emi Tanaka \email{dr.emi.tanaka@gmail.com} (\href{https://orcid.org/0000-0002-1455-259X}{ORCID})
+
+Authors:
+\itemize{
+  \item Emi Tanaka \email{dr.emi.tanaka@gmail.com} (\href{https://orcid.org/0000-0002-1455-259X}{ORCID})
+}
 
 }
 \keyword{internal}

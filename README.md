@@ -9,9 +9,10 @@
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 <!-- badges: end -->
 
-The hexmap R package aims to automate the conversion of geospatial
-polygons into hexagonal grids. This conversion allows users to better
-visualise statistical values associated with each geospatial region.
+The hexmap R package converts geospatial polygons into a map of equally
+sized hexagons. Every region gets the same amount of ink, so small but
+important regions (such as inner-city electorates) are as visible as
+large, sparsely populated ones.
 
 ## Installation
 
@@ -24,79 +25,89 @@ remotes::install_github("numbats/hexmap")
 
 ## Method
 
-1.  Make a cartogram so that each region has an approximately equal area
-    (optional)
-2.  Create a hexagonal grid based on this cartogram or other geospatial
-    object
-3.  Assign the region to the “closest” hexagon
+1.  **Tile** (`hex_grid()`): choose a hexagon size so that one hexagon
+    per region covers the same area as the map, then keep the hexagons
+    that overlap the map the most.
+2.  **Allocate** (`tile_allocate()`): give each region exactly one
+    hexagon, minimising the total squared distance between regions and
+    their hexagons. This optimal assignment is solved with the Hungarian
+    algorithm.
 
-## Example: Australian federal election 2022
+`hexmap()` does both steps in one call.
+
+## Example: Australian federal election 2025
+
+The `aec2025` data is an `sf` object with simplified boundaries of the
+150 electoral divisions used at the 3 May 2025 Australian federal
+election, and the party that won each division.
 
 ``` r
 library(hexmap)
 library(sf)
-library(cartogram)
 library(ggplot2)
-library(dplyr)
-set.seed(1)
+
+party_colours <- c(ALP = "#D7263D", LNP = "#1F4E9C", GRN = "#2E9E44", Other = "#8C8C8C")
+party_labels <- c(ALP = "Labor", LNP = "Coalition", GRN = "Greens", Other = "Independents & others")
 
 winner_map <- function(data) {
-  party_colors <- c("ALP" = "red3", "LNP" = "blue3", "GRN" = "seagreen", "Other" = "yellow2")
-  ggplot(data) + 
-    geom_sf(aes(fill = winner)) +
-    theme_void() + 
-    scale_fill_manual(values = party_colors) 
-}
-
-state_map <- function(data) {
-  ggplot(data) + 
-    geom_sf(aes(fill = state)) +
-    theme_void() 
+  ggplot(data) +
+    geom_sf(aes(fill = winner), colour = "white", linewidth = 0.2) +
+    scale_fill_manual(values = party_colours, labels = party_labels, breaks = names(party_labels), name = NULL) +
+    theme_void() +
+    theme(legend.position = "bottom")
 }
 ```
 
-The data `aec2022` in hexmap is an `sf` object with a simplified
-Australian federal electoral boundary and the corresponding party that
-won the 2022 Australian federal election for that electoral division.
+Labor won a large majority:
+
+``` r
+seats <- table(factor(aec2025$winner, levels = names(party_labels)))
+data.frame(party = party_labels, seats = as.vector(seats), row.names = NULL)
+#>                   party seats
+#> 1                 Labor    94
+#> 2             Coalition    43
+#> 3                Greens     1
+#> 4 Independents & others    12
+```
 
 ### Choropleth map
 
-``` r
-winner_map(aec2022)
-```
-
-<img src="man/figures/README-plot-choropleth-1.png" width="100%" />
-
-### Cartogram
+On a geographic map the result looks like a Coalition landslide, because
+the large rural divisions dominate the picture while Labor’s many small
+city seats are barely visible.
 
 ``` r
-aec2022carto <- aec2022 %>% 
-  st_transform(crs = "+init=epsg:3112") %>% 
-  mutate(weight = 1) %>% 
-  cartogram_cont("weight", itermax = 50)
-
-winner_map(aec2022carto)
+aec2025 <- st_transform(aec2025, crs = 3577)
+winner_map(aec2025)
 ```
 
-<img src="man/figures/README-plot-cartogram-1.png" width="100%" />
+<img src="man/figures/README-plot-choropleth-1.png" alt="" width="100%" />
+
+### Hexagon map
+
+The hexagon map gives every division the same area, so the map shows the
+number of seats won by each party.
 
 ``` r
-state_map(aec2022carto)
+aec2025_hex <- hexmap(aec2025)
+winner_map(aec2025_hex)
 ```
 
-<img src="man/figures/README-plot-cartogram-2.png" width="100%" />
+<img src="man/figures/README-plot-hexmap-1.png" alt="" width="100%" />
 
-### `geogrid` hexagonal map
+Colouring by state shows where the divisions have moved. The overall
+shape of Australia and the relative positions of divisions are kept, but
+the densely populated south-east has far more divisions than land, so
+Victorian and Sydney divisions spill inland.
 
 ``` r
-hex <- geogrid::calculate_grid(aec2022carto, grid_type = "hexagonal")
-res <- geogrid::assign_polygons(aec2022carto, hex)
-
-state_map(res)
+ggplot(aec2025_hex) +
+  geom_sf(aes(fill = state), colour = "white", linewidth = 0.2) +
+  theme_void()
 ```
 
-<img src="man/figures/README-plot-geogrid-1.png" width="100%" />
+<img src="man/figures/README-plot-hexmap-state-1.png" alt="" width="100%" />
 
 ## Related
 
--   [`geogrid`](https://github.com/jbaileyh/geogrid) package
+- [`geogrid`](https://github.com/jbaileyh/geogrid) package

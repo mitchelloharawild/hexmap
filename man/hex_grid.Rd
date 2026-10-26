@@ -7,23 +7,29 @@
 hex_grid(object, n_tiles = 100)
 }
 \arguments{
-\item{object}{An sf object or geometry to tile. It is recommended to first simplify this geometry to speed up the hexagon tiling.}
+\item{object}{An sf object or geometry to tile, in a projected coordinate
+reference system. It is recommended to first simplify this geometry to
+speed up the hexagon tiling.}
 
 \item{n_tiles}{The number of tiles to use for representing the geometry.}
 }
 \value{
-A vector of hexagon geometries that tile the input geometry.
+A vector of \code{n_tiles} hexagon geometries that tile the input geometry.
 }
 \description{
-This function will tile a geometry using a specified number of hexagons.
+Tiles a geometry with exactly \code{n_tiles} equally sized hexagons. The hexagon
+size is chosen so that \code{n_tiles} hexagons have the same total area as the
+geometry, and the hexagons that overlap the geometry the most are kept.
 }
 \examples{
 library(ozmaps)
-grid <- hex_grid(abs_ste, n_tiles = 75)
+library(sf)
+australia <- st_transform(abs_ste, 3577)
+grid <- hex_grid(australia, n_tiles = 75)
 
 library(ggplot2)
 ggplot() +
-  geom_sf(data = abs_ste) +
+  geom_sf(data = australia) +
   geom_sf(data = grid, fill = "steelblue", alpha = 0.2)
 
 }

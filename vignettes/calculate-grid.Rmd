@@ -43,8 +43,8 @@ square <- matrix(c(0, 0,
                    1, 0, 
                    0, 0), 
                  ncol = 2, 
-                 byrow = TRUE) %>% 
-  list() %>% 
+                 byrow = TRUE) |> 
+  list() |> 
   st_polygon()
 
 plot_hex_tile <- function(cellsize = NULL, n = NULL) {

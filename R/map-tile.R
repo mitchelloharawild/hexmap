@@ -1,53 +1,58 @@
 #' Create a hexagon grid that tiles a geometry
 #'
-#' This function will tile a geometry using a specified number of hexagons.
+#' Tiles a geometry with exactly `n_tiles` equally sized hexagons. The hexagon
+#' size is chosen so that `n_tiles` hexagons have the same total area as the
+#' geometry, and the hexagons that overlap the geometry the most are kept.
 #'
-#' @param object An sf object or geometry to tile. It is recommended to first simplify this geometry to speed up the hexagon tiling.
+#' @param object An sf object or geometry to tile, in a projected coordinate
+#'   reference system. It is recommended to first simplify this geometry to
+#'   speed up the hexagon tiling.
 #' @param n_tiles The number of tiles to use for representing the geometry.
 #'
 #' @return
-#' A vector of hexagon geometries that tile the input geometry.
+#' A vector of `n_tiles` hexagon geometries that tile the input geometry.
 #'
 #' @examples
 #' library(ozmaps)
-#' grid <- hex_grid(abs_ste, n_tiles = 75)
+#' library(sf)
+#' australia <- st_transform(abs_ste, 3577)
+#' grid <- hex_grid(australia, n_tiles = 75)
 #'
 #' library(ggplot2)
 #' ggplot() +
-#'   geom_sf(data = abs_ste) +
+#'   geom_sf(data = australia) +
 #'   geom_sf(data = grid, fill = "steelblue", alpha = 0.2)
 #'
-#' @importFrom sf st_bbox st_area st_as_sfc st_make_grid st_sf st_intersection
+#' @importFrom sf st_area st_geometry st_intersection st_intersects st_make_grid st_union
 #' @export
 hex_grid <- function(object, n_tiles = 100) {
-  # Get map data
-  map_width <- diff(unname(st_bbox(object))[c(1,3)])
-  map_height <- diff(unname(st_bbox(object))[c(2,4)])
-  map_area <- st_area(st_as_sfc(st_bbox(object)))
-  map_ratio <- map_width / map_height
+  check_projected(object)
+  land <- st_union(st_geometry(object))
 
-  # Compute ratio of land to map
-  land_area <- sum(st_area(object))
-  land_ratio <- as.numeric(land_area / map_area)
+  # Spacing between hexagon centres such that n_tiles hexagons cover the land
+  hex_area <- as.numeric(st_area(land)) / n_tiles
+  cellsize <- sqrt(2 * hex_area / sqrt(3))
 
-  # Number of hexagons to tile map such that ~n_tiles hexagons overlap land
-  map_hex <- n_tiles / land_ratio
+  repeat {
+    grid <- st_make_grid(land, cellsize = cellsize, square = FALSE)
+    grid <- grid[lengths(st_intersects(grid, land)) > 0]
+    if (length(grid) >= n_tiles) break
+    # Too few hexagons touch the land, so shrink them and try again
+    cellsize <- cellsize * sqrt(length(grid) / n_tiles) * 0.99
+  }
 
-  # Size of hexagons
-  hex_height <- map_height / sqrt(map_hex/map_ratio)
-  hex_width <- hex_height / (1.5/sqrt(3))
+  # Keep the n_tiles hexagons that overlap the land the most
+  overlap <- as.numeric(st_area(st_intersection(grid, land)))
+  grid[order(overlap, decreasing = TRUE)[seq_len(n_tiles)]]
+}
 
-  # Create grid
-  hex_grid <- st_make_grid(object, cellsize = hex_width, square = FALSE)
-  hex_grid <- st_sf(hex_grid, hex_id = seq_along(hex_grid))
-
-  # Choose most overlapping n_tiles hexagons for map tiling
-  hex_best <- st_intersection(hex_grid, object) %>%
-    dplyr::group_by(!!sym("hex_id")) %>%
-    dplyr::summarise(area = sum(st_area(hex_grid))) %>%
-    dplyr::top_n(n_tiles, wt = !!sym("area")) %>%
-    dplyr::pull(!!sym("hex_id"))
-
-  # Return the best hexagons
-  sf::st_geometry(hex_grid)[hex_grid$hex_id %in% hex_best]
+#' @importFrom sf st_crs st_is_longlat
+check_projected <- function(object) {
+  if (isTRUE(st_is_longlat(object)) || is.na(st_crs(object))) {
+    stop(
+      "`object` must use a projected coordinate reference system. ",
+      "Use `sf::st_transform()` first, e.g. EPSG:3577 for Australia.",
+      call. = FALSE
+    )
+  }
 }
