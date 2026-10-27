@@ -4,13 +4,16 @@
 \alias{tile_allocate}
 \title{Allocates tiled geometries to original map geometries}
 \usage{
-tile_allocate(object, tile)
+tile_allocate(object, tile, group = NULL)
 }
 \arguments{
 \item{object}{An sf object or geometry that was used to be tiled.}
 
 \item{tile}{A vector of tile geometries with one tile per row of \code{object},
 such as those produced by \code{\link[=hex_grid]{hex_grid()}}.}
+
+\item{group}{Optionally, a column of \code{object} (unquoted) that groups its
+rows (e.g. states). The tiles of each group will be contiguous.}
 }
 \value{
 \code{object} with its geometry replaced by the allocated tiles.
@@ -26,6 +29,13 @@ Minimising squared (rather than absolute) distance guarantees that no two
 geometries swap their relative position: for any two regions, the
 displacement from one tile to the other never points against the
 displacement between the original regions.
+
+When \code{group} is given, the tiles of each group are kept contiguous. The
+tiles are first allocated as above, then tiles that are cut off from the
+rest of their group are moved to its border by shifting tiles of other
+groups along the shortest path between them. Finally, the regions of each
+group are optimally allocated to that group's tiles. This guarantee of
+contiguity comes at the cost of the no-swap guarantee between groups.
 }
 \examples{
 library(ozmaps)

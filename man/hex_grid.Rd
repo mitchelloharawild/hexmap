@@ -4,7 +4,7 @@
 \alias{hex_grid}
 \title{Create a hexagon grid that tiles a geometry}
 \usage{
-hex_grid(object, n_tiles = 100)
+hex_grid(object, n_tiles = 100, island_gap = 0.5)
 }
 \arguments{
 \item{object}{An sf object or geometry to tile, in a projected coordinate
@@ -12,6 +12,10 @@ reference system. It is recommended to first simplify this geometry to
 speed up the hexagon tiling.}
 
 \item{n_tiles}{The number of tiles to use for representing the geometry.}
+
+\item{island_gap}{The distance, in hexagon widths, beyond which landmasses
+are tiled as separate islands. Closer landmasses are tiled together. Use
+\code{Inf} to tile all land together.}
 }
 \value{
 A vector of \code{n_tiles} hexagon geometries that tile the input geometry.
@@ -20,6 +24,13 @@ A vector of \code{n_tiles} hexagon geometries that tile the input geometry.
 Tiles a geometry with exactly \code{n_tiles} equally sized hexagons. The hexagon
 size is chosen so that \code{n_tiles} hexagons have the same total area as the
 geometry, and the hexagons that overlap the geometry the most are kept.
+}
+\details{
+Landmasses that are further apart than \code{island_gap} hexagon widths are
+tiled separately, with their share of the \code{n_tiles} hexagons proportional
+to their area. The hexagons of different landmasses are always separated
+by at least one empty hexagon, so islands such as Tasmania remain visibly
+distinct from the mainland.
 }
 \examples{
 library(ozmaps)

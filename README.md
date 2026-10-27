@@ -27,11 +27,14 @@ remotes::install_github("numbats/hexmap")
 
 1.  **Tile** (`hex_grid()`): choose a hexagon size so that one hexagon
     per region covers the same area as the map, then keep the hexagons
-    that overlap the map the most.
+    that overlap the map the most. Landmasses that are far enough apart
+    (such as Tasmania and the mainland) are tiled separately and kept at
+    least one hexagon apart.
 2.  **Allocate** (`tile_allocate()`): give each region exactly one
     hexagon, minimising the total squared distance between regions and
     their hexagons. This optimal assignment is solved with the Hungarian
-    algorithm.
+    algorithm. Optionally, regions can be grouped (e.g. by state) so
+    that each group’s hexagons are contiguous.
 
 `hexmap()` does both steps in one call.
 
@@ -98,7 +101,8 @@ winner_map(aec2025_hex)
 Colouring by state shows where the divisions have moved. The overall
 shape of Australia and the relative positions of divisions are kept, but
 the densely populated south-east has far more divisions than land, so
-Victorian and Sydney divisions spill inland.
+Victorian and Sydney divisions spill inland. Tasmania is tiled as a
+separate island, with one hexagon for each of its five divisions.
 
 ``` r
 ggplot(aec2025_hex) +
@@ -107,6 +111,19 @@ ggplot(aec2025_hex) +
 ```
 
 <img src="man/figures/README-plot-hexmap-state-1.png" alt="" width="100%" />
+
+### Grouping by state
+
+Grouping the divisions by state keeps each state’s hexagons together,
+and a small gap along the state borders makes each state visually
+distinct.
+
+``` r
+aec2025_state_hex <- hexmap(aec2025, group = state)
+winner_map(aec2025_state_hex)
+```
+
+<img src="man/figures/README-plot-hexmap-group-1.png" alt="" width="100%" />
 
 ## Related
 

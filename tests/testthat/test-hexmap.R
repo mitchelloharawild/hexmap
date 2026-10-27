@@ -1,4 +1,12 @@
 aec <- sf::st_transform(aec2025, 3577)
+cellsize <- hex_cellsize(sf::st_geometry(aec), nrow(aec))
+
+# Number of separate pieces formed by the tiles of each group
+group_pieces <- function(hex, group) {
+  vapply(split(sf::st_geometry(hex), group), function(x) {
+    length(sf::st_cast(sf::st_union(sf::st_buffer(x, 1)), "POLYGON"))
+  }, integer(1))
+}
 
 test_that("hex_grid() returns exactly n_tiles distinct hexagons", {
   grid <- hex_grid(aec, n_tiles = 150)
@@ -7,13 +15,15 @@ test_that("hex_grid() returns exactly n_tiles distinct hexagons", {
   expect_length(unique(grid), 150)
 })
 
-test_that("hex_grid() shrinks hexagons when too few overlap the map", {
+test_that("hex_grid() tiles distant islands separately", {
   islands <- sf::st_sfc(
     sf::st_buffer(sf::st_point(c(0, 0)), 1),
     sf::st_buffer(sf::st_point(c(100, 0)), 1),
     crs = 3577
   )
-  expect_length(hex_grid(islands, n_tiles = 2), 2)
+  grid <- hex_grid(islands, n_tiles = 2)
+  expect_length(grid, 2)
+  expect_true(all(lengths(sf::st_intersects(grid, islands)) == 1))
 })
 
 test_that("tile_allocate() assigns each region a unique tile", {
@@ -25,7 +35,7 @@ test_that("tile_allocate() assigns each region a unique tile", {
 })
 
 test_that("tile_allocate() never swaps the relative position of two regions", {
-  hex <- hexmap(aec)
+  hex <- tile_allocate(aec, hex_grid(aec, n_tiles = nrow(aec)))
   from <- sf::st_coordinates(sf::st_point_on_surface(sf::st_geometry(aec)))
   to <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(hex)))
   inner <- outer(from[, 1], from[, 1], "-") * outer(to[, 1], to[, 1], "-") +
@@ -33,7 +43,57 @@ test_that("tile_allocate() never swaps the relative position of two regions", {
   expect_gte(min(inner), -1e-6)
 })
 
+test_that("hexmap() keeps islands apart from the mainland", {
+  hex <- hexmap(aec)
+  tas <- hex$state == "TAS"
+  gap <- sf::st_distance(sf::st_union(hex[tas, ]), sf::st_union(hex[!tas, ]))
+  expect_gt(as.numeric(gap), cellsize / 2)
+  expect_equal(unname(group_pieces(hex[tas, ], "TAS")), 1L)
+
+  # With no island gap Tasmania is tiled together with the mainland
+  hex <- hexmap(aec, island_gap = Inf)
+  gap <- sf::st_distance(sf::st_union(hex[tas, ]), sf::st_union(hex[!tas, ]))
+  expect_lt(as.numeric(gap), cellsize / 2)
+})
+
+test_that("hexmap() keeps the tiles of each group contiguous", {
+  hex <- hexmap(aec, group = state, group_gap = 0)
+  expect_true(all(group_pieces(hex, hex$state) == 1))
+
+  # Each piece of a group that spans islands is contiguous
+  expect_warning(hex <- hexmap(aec, group = winner, group_gap = 0), NA)
+  pieces <- group_pieces(hex, hex$winner)
+  expect_true(all(pieces <= 2))
+  tas <- hex$state == "TAS"
+  expect_true(all(group_pieces(hex[!tas, ], hex$winner[!tas]) == 1))
+})
+
+test_that("tile_allocate() keeps the tiles of each group contiguous", {
+  hex <- tile_allocate(aec, hex_grid(aec, n_tiles = nrow(aec), island_gap = Inf),
+                       group = state)
+  expect_true(all(group_pieces(hex, hex$state) == 1))
+})
+
+test_that("hexmap() separates groups with a gap", {
+  gap <- 0.1
+  hex <- hexmap(aec, group = state, group_gap = gap)
+  states <- split(sf::st_geometry(hex), hex$state)
+  between <- sf::st_distance(sf::st_union(states$ACT), sf::st_union(states$NSW))
+  expect_equal(as.numeric(between), gap * cellsize, tolerance = 1e-6)
+
+  # Hexagons only shrink along group borders
+  ungrouped <- hexmap(aec, group = state, group_gap = 0)
+  area <- as.numeric(sf::st_area(hex)) / as.numeric(sf::st_area(ungrouped))
+  expect_true(all(area <= 1 + 1e-9))
+  expect_true(any(area == 1))
+  expect_true(any(area < 1))
+})
+
 test_that("inputs are validated", {
   expect_error(hexmap(aec2025), "projected")
   expect_error(tile_allocate(aec, hex_grid(aec, n_tiles = 10)), "exactly one")
+  expect_error(hexmap(aec, group = state[1:3]), "one value for each row")
+  empty <- aec[1:3, ]
+  sf::st_geometry(empty)[2] <- sf::st_polygon()
+  expect_error(hexmap(empty), "empty")
 })

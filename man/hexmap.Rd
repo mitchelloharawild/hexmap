@@ -4,10 +4,20 @@
 \alias{hexmap}
 \title{Convert a map into a hexagon tile map}
 \usage{
-hexmap(object)
+hexmap(object, group = NULL, island_gap = 0.5, group_gap = 0.1)
 }
 \arguments{
 \item{object}{An sf object in a projected coordinate reference system.}
+
+\item{group}{Optionally, a column of \code{object} (unquoted) that groups its
+regions (e.g. states).}
+
+\item{island_gap}{The distance, in hexagon widths, beyond which landmasses
+are tiled as separate islands. Use \code{Inf} to tile all land together.}
+
+\item{group_gap}{The width of the gap between groups, as a fraction of the
+hexagon width. The hexagons along group borders are trimmed to make this
+gap, so they are slightly smaller than other hexagons.}
 }
 \value{
 \code{object} with its geometry replaced by hexagons.
@@ -17,9 +27,19 @@ Replaces each region of a map with a hexagon of equal size. The hexagons
 tile the outline of the map, and each region is allocated the hexagon that
 minimises the total squared displacement of all regions.
 }
+\details{
+Landmasses that are further apart than \code{island_gap} hexagon widths are
+tiled separately, with one hexagon for each region on that landmass. Their
+hexagons are separated by at least one empty hexagon, so islands such as
+Tasmania remain distinct from the mainland.
+
+When \code{group} is given, the hexagons of each group (e.g. state) are kept
+contiguous and a gap of \code{group_gap} hexagon widths is cut along the borders
+between groups, so that each group is visually distinct.
+}
 \examples{
 library(sf)
-aec_hex <- hexmap(st_transform(aec2025, 3577))
+aec_hex <- hexmap(st_transform(aec2025, 3577), group = state)
 
 library(ggplot2)
 ggplot(aec_hex) +
