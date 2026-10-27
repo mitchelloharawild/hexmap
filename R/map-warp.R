@@ -1,3 +1,39 @@
+# Tiles a map warped into a continuous cartogram, so that each group keeps its
+# shape and the borders between groups. Each group's (simplified) shape on
+# each landmass is warped so that its area is proportional to its regions.
+#
+# Returns the tile of each region, and the size of the tiles.
+#' @importFrom sf st_make_valid st_point_on_surface st_simplify
+cartogram_tiles <- function(geometry, group, land, cellsize) {
+  warp <- warp_groups(geometry, group, land$region, cellsize)
+  group_shape <- st_make_valid(warp_apply(warp$shape, warp$forces))[warp$piece]
+  land_shape <- st_simplify(land$geometry, preserveTopology = TRUE,
+                            dTolerance = cellsize / 10)
+  land_shape <- st_make_valid(warp_apply(land_shape, warp$forces))
+  point <- warp_apply(st_point_on_surface(geometry), warp$forces)
+
+  cellsize <- hex_cellsize(land_shape, length(geometry))
+  n <- tabulate(land$region, nbins = length(land_shape))
+  grid <- landmass_grid(land_shape, n, cellsize)
+  index <- allocate_tiles(point, grid$tile, group, land$region, grid$landmass,
+                          group_shape)
+  list(tile = grid$tile[index], cellsize = cellsize)
+}
+
+# Finds the cartogram forces that resize each group in proportion to its
+# number of regions, from the (simplified) shape of each group on each
+# landmass. Returns the piece of each region, the shape of each piece, and the
+# forces.
+#' @importFrom sf st_simplify st_union
+warp_groups <- function(geometry, group, region_land, cellsize) {
+  id <- as.integer(factor(group, exclude = NULL))
+  piece <- interaction(id, region_land, drop = TRUE)
+  shape <- do.call(c, lapply(split(geometry, piece), st_union))
+  shape <- st_simplify(shape, preserveTopology = TRUE, dTolerance = cellsize / 10)
+  forces <- cartogram_forces(shape, id[match(levels(piece), piece)], tabulate(id))
+  list(piece = as.integer(piece), shape = shape, forces = forces)
+}
+
 # Finds a continuous deformation of the plane that resizes each group's area
 # in proportion to its number of regions, using the rubber sheet cartogram
 # algorithm of Dougenik, Chrisman & Niemeyer (1985). Groups keep their shape

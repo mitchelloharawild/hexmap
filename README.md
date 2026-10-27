@@ -36,9 +36,11 @@ remotes::install_github("numbats/hexmap")
     algorithm. Optionally, regions can be grouped (e.g. by state) so
     that each group’s hexagons are contiguous.
 
-When grouping, `hexmap()` first warps the map so that each group’s area
-is proportional to its number of regions, which keeps the shape of each
-group and the borders between them.
+When grouping, `hexmap()` arranges each group as a compact block of
+hexagons by default, keeping neighbouring groups in their relative
+directions. Alternatively, `group_layout = "cartogram"` warps the map so
+that each group’s area is proportional to its number of regions, which
+keeps the shape of each group and the borders between them.
 
 `hexmap()` does both steps in one call.
 
@@ -120,11 +122,9 @@ ggplot(aec2025_hex) +
 
 Grouping the divisions by state keeps each state’s hexagons together,
 and a small gap along the state borders makes each state visually
-distinct. To keep each state’s shape and position, the map is first
-warped into a cartogram where each state’s area is proportional to its
-number of divisions, and the hexagons are split between states along the
-warped borders. This enlarges the densely populated south-east, while
-Western Australia and the Northern Territory shrink.
+distinct. By default each state is drawn as a compact block, with the
+blocks arranged as the states are on the map, much like the hexagon maps
+used in election coverage.
 
 ``` r
 aec2025_state_hex <- hexmap(aec2025, group = state)
@@ -132,6 +132,18 @@ winner_map(aec2025_state_hex)
 ```
 
 <img src="man/figures/README-plot-hexmap-group-1.png" alt="" width="100%" />
+
+The `"cartogram"` layout instead keeps the shape of each state, by
+warping the map so that each state’s area is proportional to its number
+of divisions. This enlarges the densely populated south-east, while
+Western Australia and the Northern Territory shrink.
+
+``` r
+aec2025_cartogram_hex <- hexmap(aec2025, group = state, group_layout = "cartogram")
+winner_map(aec2025_cartogram_hex)
+```
+
+<img src="man/figures/README-plot-hexmap-cartogram-1.png" alt="" width="100%" />
 
 ## Related
 

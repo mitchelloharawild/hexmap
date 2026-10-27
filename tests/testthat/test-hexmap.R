@@ -57,31 +57,58 @@ test_that("hexmap() keeps islands apart from the mainland", {
 })
 
 test_that("hexmap() keeps the tiles of each group contiguous", {
-  hex <- hexmap(aec, group = state, group_gap = 0)
-  expect_true(all(group_pieces(hex, hex$state) == 1))
+  for (layout in c("compact", "cartogram")) {
+    hex <- hexmap(aec, group = state, group_layout = layout, group_gap = 0)
+    expect_true(all(group_pieces(hex, hex$state) == 1))
 
-  # Each piece of a group that spans islands is contiguous
-  expect_warning(hex <- hexmap(aec, group = winner, group_gap = 0), NA)
-  pieces <- group_pieces(hex, hex$winner)
-  expect_true(all(pieces <= 2))
-  tas <- hex$state == "TAS"
-  expect_true(all(group_pieces(hex[!tas, ], hex$winner[!tas]) == 1))
+    # Each piece of a group that spans islands is contiguous
+    expect_warning(
+      hex <- hexmap(aec, group = winner, group_layout = layout, group_gap = 0),
+      NA
+    )
+    pieces <- group_pieces(hex, hex$winner)
+    expect_true(all(pieces <= 2))
+    tas <- hex$state == "TAS"
+    expect_true(all(group_pieces(hex[!tas, ], hex$winner[!tas]) == 1))
+  }
 })
 
+centre_of <- function(x) {
+  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(x)))
+  apply(xy, 2, function(v) tapply(v, x$state, mean))
+}
+
 test_that("hexmap() keeps each group in its place", {
-  hex <- hexmap(aec, group = state)
-  centre <- function(x) {
-    xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(x)))
-    apply(xy, 2, function(v) tapply(v, x$state, mean))
+  for (layout in c("compact", "cartogram")) {
+    xy <- centre_of(hexmap(aec, group = state, group_layout = layout))
+    west_of <- function(a, b) all(xy[a, "X"] < xy[b, "X"])
+    north_of <- function(a, b) all(xy[a, "Y"] > xy[b, "Y"])
+    expect_true(west_of("WA", c("SA", "NT", "QLD", "NSW", "VIC")))
+    expect_true(west_of(c("SA", "NT"), c("QLD", "NSW")))
+    expect_true(north_of(c("NT", "QLD"), c("SA", "NSW", "VIC", "TAS")))
+    expect_true(north_of("NSW", c("VIC", "TAS")))
+    expect_true(north_of("VIC", "TAS"))
   }
-  xy <- centre(hex)
-  west_of <- function(a, b) all(xy[a, "X"] < xy[b, "X"])
-  north_of <- function(a, b) all(xy[a, "Y"] > xy[b, "Y"])
-  expect_true(west_of("WA", c("SA", "NT", "QLD", "NSW", "VIC")))
-  expect_true(west_of(c("SA", "NT"), c("QLD", "NSW")))
-  expect_true(north_of(c("NT", "QLD"), c("SA", "NSW", "VIC", "TAS")))
-  expect_true(north_of("NSW", c("VIC", "TAS")))
-  expect_true(north_of("VIC", "TAS"))
+})
+
+test_that("hexmap() lays out groups as compact blocks", {
+  hex <- hexmap(aec, group = state, group_gap = 0)
+  tas <- hex$state == "TAS"
+  # The mainland has no holes
+  mainland <- sf::st_union(sf::st_buffer(sf::st_geometry(hex[!tas, ]), 1))
+  expect_length(sf::st_cast(mainland, "POLYGON"), 1)
+  expect_length(mainland[[1]], 1)
+  # Tasmania is at least one hexagon away from the mainland
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  gap <- sf::st_distance(sf::st_union(hex[tas, ]), sf::st_union(hex[!tas, ]))
+  expect_gt(as.numeric(gap), size / 2)
+})
+
+test_that("group_anchor moves groups", {
+  nsw <- sf::st_coordinates(sf::st_centroid(sf::st_union(aec[aec$state == "NSW", ])))
+  anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
+  xy <- centre_of(hexmap(aec, group = state, group_anchor = anchor))
+  expect_gt(xy["ACT", "X"], xy["NSW", "X"])
 })
 
 test_that("tile_allocate() keeps the tiles of each group contiguous", {
@@ -113,4 +140,10 @@ test_that("inputs are validated", {
   empty <- aec[1:3, ]
   sf::st_geometry(empty)[2] <- sf::st_polygon()
   expect_error(hexmap(empty), "empty")
+  expect_error(hexmap(aec, group = state, group_anchor = data.frame(group = "ACT")),
+               "columns")
+  expect_error(
+    hexmap(aec, group = state, group_anchor = data.frame(group = "X", x = 0, y = 0)),
+    "unknown groups"
+  )
 })
