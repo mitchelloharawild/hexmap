@@ -39,7 +39,7 @@
 #'   geom_sf(data = australia) +
 #'   geom_sf(data = hexes, aes(fill = NAME), alpha = 0.5)
 #'
-#' @importFrom sf st_geometry st_geometry<-
+#' @importFrom sf st_geometry st_geometry<- st_point_on_surface
 #' @export
 tile_allocate <- function(object, tile, group = NULL) {
   group <- eval(substitute(group), attribute_data(object), parent.frame())
@@ -51,32 +51,53 @@ tile_allocate <- function(object, tile, group = NULL) {
   check_group(group, object)
   check_not_empty(object)
 
-  st_geometry(object) <- tile[allocate_tiles(st_geometry(object), tile, group)]
+  point <- st_point_on_surface(st_geometry(object))
+  st_geometry(object) <- tile[allocate_tiles(point, tile, group)]
   object
 }
 
-# Returns the index of the tile allocated to each region. Regions may only be
-# allocated tiles from the same block (e.g. landmass).
-#' @importFrom sf st_area st_centroid st_coordinates st_point_on_surface
-allocate_tiles <- function(geometry, tile, group = NULL,
-                           region_block = rep(1L, length(geometry)),
-                           tile_block = rep(1L, length(tile))) {
-  from <- st_coordinates(st_point_on_surface(geometry))
+# Returns the index of the tile allocated to each region, given a point for
+# each region. Regions may only be allocated tiles from the same block (e.g.
+# landmass).
+#
+# Tiles are split between groups by the regions' optimal allocation, or when
+# group_shape (the shape of each region's group) is given, by which group's
+# shape is nearest so that the borders between groups are kept.
+#' @importFrom sf st_area st_centroid st_coordinates
+allocate_tiles <- function(point, tile, group = NULL,
+                           region_block = rep(1L, length(point)),
+                           tile_block = rep(1L, length(tile)),
+                           group_shape = NULL) {
+  from <- st_coordinates(point)
   centre <- st_centroid(tile)
   to <- st_coordinates(centre)
   cellsize <- sqrt(2 * stats::median(as.numeric(st_area(tile))) / sqrt(3))
   if (!is.null(group)) group <- as.integer(factor(group, exclude = NULL))
 
-  index <- integer(length(geometry))
+  index <- integer(length(point))
   for (block in unique(region_block)) {
     i <- which(region_block == block)
     j <- which(tile_block == block)
     index[i] <- j[solve_assignment(from[i, , drop = FALSE], to[j, , drop = FALSE])]
     if (is.null(group)) next
 
-    # Make each group's tiles contiguous, then allocate tiles within groups
+    # Make each group's tiles contiguous, starting from the tiles nearest each
+    # group's shape if possible, or else from the regions' allocated tiles
+    adjacent <- hex_adjacency(centre[j], cellsize)
     tile_group <- group[i][match(j, index[i])]
-    tile_group <- contiguous_groups(tile_group, hex_adjacency(centre[j], cellsize))
+    if (!is.null(group_shape)) {
+      by_shape <- nearest_shape_groups(group[i], group_shape[i], centre[j])
+      by_shape <- contiguous_groups(by_shape, adjacent)
+      if (attr(by_shape, "contiguous")) tile_group <- by_shape
+    }
+    if (is.null(attr(tile_group, "contiguous"))) {
+      tile_group <- contiguous_groups(tile_group, adjacent)
+    }
+    if (!attr(tile_group, "contiguous")) {
+      warning("Could not make the tiles of every group contiguous.", call. = FALSE)
+    }
+
+    # Allocate the regions of each group to its tiles
     for (g in unique(group[i])) {
       ig <- i[group[i] == g]
       jg <- j[tile_group == g]
@@ -92,11 +113,23 @@ solve_assignment <- function(from, to) {
   as.integer(clue::solve_LSAP(cost))
 }
 
+# Splits tiles between groups, with one tile for each region, minimising the
+# total squared distance between tiles and the shape of their group
+#' @importFrom sf st_distance
+nearest_shape_groups <- function(group, group_shape, centre) {
+  groups <- unique(group)
+  shape <- group_shape[match(groups, group)]
+  cost <- matrix(as.numeric(st_distance(centre, shape))^2, ncol = length(groups))
+  column <- match(group, groups)
+  group[as.integer(clue::solve_LSAP(cost[, column, drop = FALSE]))]
+}
+
 # Relabels tiles so that each group's tiles are contiguous, keeping the number
 # of tiles in each group. While a group is split into pieces, a tile of a
 # smaller piece is moved next to its largest piece by shifting the labels of
 # the tiles along the shortest path between them. A move is only made if it
 # reduces the number of tiles that are cut off from their group overall.
+# The result records whether every group was made contiguous.
 contiguous_groups <- function(label, adjacent) {
   groups <- unique(label)
   cut_off <- function(label, g) {
@@ -128,12 +161,9 @@ contiguous_groups <- function(label, adjacent) {
       }
       if (moved) break
     }
-    if (!moved) {
-      warning("Could not make the tiles of every group contiguous.", call. = FALSE)
-      break
-    }
+    if (!moved) break
   }
-  label
+  structure(label, contiguous = all(cost == 0))
 }
 
 # Breadth first search from start through passable tiles, returning the paths

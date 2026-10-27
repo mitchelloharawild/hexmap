@@ -68,6 +68,22 @@ test_that("hexmap() keeps the tiles of each group contiguous", {
   expect_true(all(group_pieces(hex[!tas, ], hex$winner[!tas]) == 1))
 })
 
+test_that("hexmap() keeps each group in its place", {
+  hex <- hexmap(aec, group = state)
+  centre <- function(x) {
+    xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(x)))
+    apply(xy, 2, function(v) tapply(v, x$state, mean))
+  }
+  xy <- centre(hex)
+  west_of <- function(a, b) all(xy[a, "X"] < xy[b, "X"])
+  north_of <- function(a, b) all(xy[a, "Y"] > xy[b, "Y"])
+  expect_true(west_of("WA", c("SA", "NT", "QLD", "NSW", "VIC")))
+  expect_true(west_of(c("SA", "NT"), c("QLD", "NSW")))
+  expect_true(north_of(c("NT", "QLD"), c("SA", "NSW", "VIC", "TAS")))
+  expect_true(north_of("NSW", c("VIC", "TAS")))
+  expect_true(north_of("VIC", "TAS"))
+})
+
 test_that("tile_allocate() keeps the tiles of each group contiguous", {
   hex <- tile_allocate(aec, hex_grid(aec, n_tiles = nrow(aec), island_gap = Inf),
                        group = state)
@@ -79,7 +95,8 @@ test_that("hexmap() separates groups with a gap", {
   hex <- hexmap(aec, group = state, group_gap = gap)
   states <- split(sf::st_geometry(hex), hex$state)
   between <- sf::st_distance(sf::st_union(states$ACT), sf::st_union(states$NSW))
-  expect_equal(as.numeric(between), gap * cellsize, tolerance = 1e-6)
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  expect_equal(as.numeric(between), gap * size, tolerance = 1e-6)
 
   # Hexagons only shrink along group borders
   ungrouped <- hexmap(aec, group = state, group_gap = 0)

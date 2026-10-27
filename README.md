@@ -36,6 +36,10 @@ remotes::install_github("numbats/hexmap")
     algorithm. Optionally, regions can be grouped (e.g. by state) so
     that each group’s hexagons are contiguous.
 
+When grouping, `hexmap()` first warps the map so that each group’s area
+is proportional to its number of regions, which keeps the shape of each
+group and the borders between them.
+
 `hexmap()` does both steps in one call.
 
 ## Example: Australian federal election 2025
@@ -116,7 +120,11 @@ ggplot(aec2025_hex) +
 
 Grouping the divisions by state keeps each state’s hexagons together,
 and a small gap along the state borders makes each state visually
-distinct.
+distinct. To keep each state’s shape and position, the map is first
+warped into a cartogram where each state’s area is proportional to its
+number of divisions, and the hexagons are split between states along the
+warped borders. This enlarges the densely populated south-east, while
+Western Australia and the Northern Territory shrink.
 
 ``` r
 aec2025_state_hex <- hexmap(aec2025, group = state)

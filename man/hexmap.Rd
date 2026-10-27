@@ -35,7 +35,15 @@ Tasmania remain distinct from the mainland.
 
 When \code{group} is given, the hexagons of each group (e.g. state) are kept
 contiguous and a gap of \code{group_gap} hexagon widths is cut along the borders
-between groups, so that each group is visually distinct.
+between groups, so that each group is visually distinct. To keep the shape
+and position of each group, the map is first warped into a continuous
+cartogram (Dougenik, Chrisman & Niemeyer, 1985) where each group's area is
+proportional to its number of regions. The hexagons tile this warped map,
+and are split between groups along the warped borders. As a result, the
+outline of the hexagons follows the warped map rather than the original
+outline: groups with many small regions grow, while groups with few large
+regions shrink. Grouping works best for groups that are spatially
+contiguous, such as states.
 }
 \examples{
 library(sf)
@@ -45,6 +53,11 @@ library(ggplot2)
 ggplot(aec_hex) +
   geom_sf(aes(fill = winner))
 
+}
+\references{
+Dougenik, J. A., Chrisman, N. R., & Niemeyer, D. R. (1985). An algorithm to
+construct continuous area cartograms. \emph{The Professional Geographer},
+37(1), 75--81.
 }
 \seealso{
 \code{\link[=hex_grid]{hex_grid()}} to create the hexagons and \code{\link[=tile_allocate]{tile_allocate()}} to
