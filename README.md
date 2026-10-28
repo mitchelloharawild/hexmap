@@ -64,21 +64,56 @@ rural divisions hide Labor’s many small city seats. A cartogram with
 equal areas for each division shows the number of seats, but distorts
 the map beyond recognition. A hexagon grid made with
 [geogrid](https://github.com/jbaileyh/geogrid) gives each division the
-same space, but scatters the divisions of each state, so Tasmania’s five
-seats end up across the mainland. hexmap keeps each state together, in
-its place and with its neighbours.
+same space, but doesn’t keep states together. hexmap keeps each state
+together, in its place and with its neighbours.
+
+hexmap includes the results as `aus_election2025`: the simplified
+boundaries of each division from the [Australian Bureau of
+Statistics](https://www.abs.gov.au/), with its state and the party that
+won it from the [Australian Electoral
+Commission](https://www.aec.gov.au/), licensed under CC BY 4.0. The maps
+below are made in the Australian Albers equal-area projection, with the
+minor parties combined:
 
 ``` r
+library(sf)
+library(hexmap)
+
+party <- c(ALP = "Labor", LP = "Coalition", LNP = "Coalition", NP = "Coalition",
+           GRN = "Greens")
+election <- st_transform(aus_election2025, 3577)
+election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
+```
+
+Each method then gives every division the same area:
+
+``` r
+library(cartogram)
+library(geogrid)
+
+# Cartogram
+election$seats <- 1
+election_cartogram <- cartogram_cont(election, "seats", itermax = 20)
+
+# geogrid
+grid <- calculate_grid(election, grid_type = "hexagonal", seed = 1)
+election_geogrid <- assign_polygons(election, grid)
+
+# hexmap
 election_hexmap <- hexmap(election, group = state)
 ```
 
 <img src="man/figures/README-comparison-1.png" alt="" width="100%" />
 
-The `aus_election2025` data has the simplified boundaries of each
-division from the [Australian Bureau of
-Statistics](https://www.abs.gov.au/), and the party that won it from the
-[Australian Electoral Commission](https://www.aec.gov.au/), licensed
-under CC BY 4.0. See [`README.Rmd`](README.Rmd) for the code.
+Colouring the divisions by state shows the difference. geogrid scatters
+the divisions of each state across the grid, so four of Tasmania’s five
+seats end up on the mainland. hexmap keeps each state in one piece,
+touching the same states as on the map.
+
+<img src="man/figures/README-states-1.png" alt="" width="100%" />
+
+The code for the plots (with ggplot2 and patchwork) is in
+[`README.Rmd`](README.Rmd).
 
 ## Related
 
