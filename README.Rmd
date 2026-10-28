@@ -14,7 +14,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# hexmap
+# hexmap <a href="https://numbats.github.io/hexmap/"><img src="man/figures/logo.png" align="right" height="138" alt="hexmap website" /></a>
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)

@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# hexmap
+# hexmap <a href="https://numbats.github.io/hexmap/"><img src="man/figures/logo.png" align="right" height="138" alt="hexmap website" /></a>
 
 <!-- badges: start -->
 
