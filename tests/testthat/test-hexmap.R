@@ -56,8 +56,54 @@ test_that("hexmap() keeps islands apart from the mainland", {
   expect_lt(as.numeric(gap), cellsize / 2)
 })
 
+centre_of <- function(x) {
+  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(x)))
+  apply(xy, 2, function(v) tapply(v, x$state, mean))
+}
+
+layouts <- list(layout_repair(layout_diffusion()), layout_diffusion(alpha = 0),
+                layout_diffusion(alpha = 1), layout_compact(),
+                layout_repair(layout_compact()), layout_slice())
+
+# The pairs of states whose tiles touch
+touching <- function(hex) {
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  near <- sf::st_is_within_distance(sf::st_centroid(sf::st_geometry(hex)), dist = 1.2 * size)
+  pair <- cbind(hex$state[rep(seq_along(near), lengths(near))], hex$state[unlist(near)])
+  pair <- pair[pair[, 1] < pair[, 2], , drop = FALSE]
+  sort(unique(paste(pair[, 1], pair[, 2], sep = "-")))
+}
+borders <- c("ACT-NSW", "NSW-QLD", "NSW-SA", "NSW-VIC", "NT-QLD", "NT-SA", "NT-WA",
+             "QLD-SA", "SA-VIC", "SA-WA")
+
+test_that("the diffusion layout keeps the borders between states", {
+  hex <- hexmap(aec, group = state, group_gap = 0)
+  expect_equal(touching(hex), borders)
+  # Without repair, the borders are close but not exact
+  hex <- hexmap(aec, group = state, group_layout = layout_diffusion(), group_gap = 0)
+  expect_gte(length(intersect(touching(hex), borders)), length(borders) - 1)
+})
+
+test_that("layout_repair() fixes the borders of other layouts", {
+  hex <- hexmap(aec, group = state, group_gap = 0,
+                group_layout = layout_repair(layout_compact()))
+  expect_true(all(borders %in% touching(hex)))
+  # Repair keeps the hexagons of the layout
+  compact <- hexmap(aec, group = state, group_layout = layout_compact(), group_gap = 0)
+  expect_setequal(sf::st_geometry(hex), sf::st_geometry(compact))
+})
+
+test_that("the diffusion layout keeps the outline of the map without warping", {
+  hex <- hexmap(aec, group = state, group_layout = layout_diffusion(alpha = 0),
+                group_gap = 0)
+  expect_setequal(sf::st_geometry(hex), sf::st_geometry(hexmap(aec)))
+  # Warping moves the outline
+  hex <- hexmap(aec, group = state, group_layout = layout_diffusion(), group_gap = 0)
+  expect_false(setequal(sf::st_geometry(hex), sf::st_geometry(hexmap(aec))))
+})
+
 test_that("hexmap() keeps the tiles of each group contiguous", {
-  for (layout in c("compact", "cartogram")) {
+  for (layout in layouts) {
     hex <- hexmap(aec, group = state, group_layout = layout, group_gap = 0)
     expect_true(all(group_pieces(hex, hex$state) == 1))
 
@@ -73,13 +119,8 @@ test_that("hexmap() keeps the tiles of each group contiguous", {
   }
 })
 
-centre_of <- function(x) {
-  xy <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(x)))
-  apply(xy, 2, function(v) tapply(v, x$state, mean))
-}
-
 test_that("hexmap() keeps each group in its place", {
-  for (layout in c("compact", "cartogram")) {
+  for (layout in layouts) {
     xy <- centre_of(hexmap(aec, group = state, group_layout = layout))
     west_of <- function(a, b) all(xy[a, "X"] < xy[b, "X"])
     north_of <- function(a, b) all(xy[a, "Y"] > xy[b, "Y"])
@@ -92,7 +133,7 @@ test_that("hexmap() keeps each group in its place", {
 })
 
 test_that("hexmap() lays out groups as compact blocks", {
-  hex <- hexmap(aec, group = state, group_gap = 0)
+  hex <- hexmap(aec, group = state, group_layout = layout_compact(), group_gap = 0)
   tas <- hex$state == "TAS"
   # The mainland has no holes
   mainland <- sf::st_union(sf::st_buffer(sf::st_geometry(hex[!tas, ]), 1))
@@ -104,11 +145,44 @@ test_that("hexmap() lays out groups as compact blocks", {
   expect_gt(as.numeric(gap), size / 2)
 })
 
-test_that("group_anchor moves groups", {
+test_that("anchor moves compact groups", {
   nsw <- sf::st_coordinates(sf::st_centroid(sf::st_union(aec[aec$state == "NSW", ])))
   anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-  xy <- centre_of(hexmap(aec, group = state, group_anchor = anchor))
+  xy <- centre_of(hexmap(aec, group = state,
+                          group_layout = layout_compact(anchor = anchor)))
   expect_gt(xy["ACT", "X"], xy["NSW", "X"])
+})
+
+test_that("the slice layout cuts groups apart with straight borders", {
+  hex <- hexmap(aec, group = state, group_layout = layout_slice(), group_gap = 0)
+  expect_length(unique(sf::st_geometry(hex)), nrow(aec))
+  expect_true(all(group_pieces(hex, hex$state) == 1))
+
+  # The mainland is a block with no holes, and Tasmania is kept apart
+  tas <- hex$state == "TAS"
+  mainland <- sf::st_union(sf::st_buffer(sf::st_geometry(hex[!tas, ]), 1))
+  expect_length(sf::st_cast(mainland, "POLYGON"), 1)
+  expect_length(mainland[[1]], 1)
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  gap <- sf::st_distance(sf::st_union(hex[tas, ]), sf::st_union(hex[!tas, ]))
+  expect_gt(as.numeric(gap), size)
+
+  xy <- centre_of(hex)
+  expect_gt(xy["NT", "Y"], xy["SA", "Y"])
+  expect_lt(xy["WA", "X"], xy["SA", "X"])
+  expect_lt(xy["VIC", "Y"], xy["NSW", "Y"])
+})
+
+test_that("tree sets the cuts of the slice layout", {
+  tree <- list(c("WA", "NT", "SA", "TAS"), c("QLD", "NSW", "ACT", "VIC"))
+  hex <- hexmap(aec, group = state, group_layout = layout_slice(tree = tree),
+                group_gap = 0)
+  expect_true(all(group_pieces(hex, hex$state) == 1))
+  # The western states are all west of the eastern states
+  x <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(hex)))[, 1]
+  west <- hex$state %in% c("WA", "NT", "SA")
+  east <- hex$state %in% c("QLD", "NSW", "ACT", "VIC")
+  expect_lt(max(x[west]), min(x[east]))
 })
 
 test_that("tile_allocate() keeps the tiles of each group contiguous", {
@@ -140,10 +214,19 @@ test_that("inputs are validated", {
   empty <- aec[1:3, ]
   sf::st_geometry(empty)[2] <- sf::st_polygon()
   expect_error(hexmap(empty), "empty")
-  expect_error(hexmap(aec, group = state, group_anchor = data.frame(group = "ACT")),
-               "columns")
-  expect_error(
-    hexmap(aec, group = state, group_anchor = data.frame(group = "X", x = 0, y = 0)),
-    "unknown groups"
-  )
+  compact <- function(anchor) {
+    hexmap(aec, group = state, group_layout = layout_compact(anchor = anchor))
+  }
+  expect_error(compact(data.frame(group = "ACT")), "columns")
+  expect_error(compact(data.frame(group = "X", x = 0, y = 0)), "unknown groups")
+  slice <- function(tree) {
+    hexmap(aec, group = state, group_layout = layout_slice(tree = tree))
+  }
+  expect_error(slice(list(1, 2)), "nested list of group names")
+  expect_error(slice(list(unique(aec$state), "X")), "unknown groups: X")
+  expect_error(slice(list("WA", "NT")), "missing groups")
+  expect_error(slice(list(unique(aec$state), "WA")), "more than once: WA")
+  expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
+  expect_error(layout_repair("compact"), "`layout` must be a layout function")
+  expect_error(hexmap(aec, group = state, group_layout = "compact"), "layout function")
 })

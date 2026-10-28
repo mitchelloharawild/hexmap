@@ -7,10 +7,9 @@
 hexmap(
   object,
   group = NULL,
-  group_layout = c("compact", "cartogram"),
+  group_layout = layout_repair(layout_diffusion()),
   island_gap = 0.5,
-  group_gap = 0.1,
-  group_anchor = NULL
+  group_gap = 0.1
 )
 }
 \arguments{
@@ -19,8 +18,9 @@ hexmap(
 \item{group}{Optionally, a column of \code{object} (unquoted) that groups its
 regions (e.g. states).}
 
-\item{group_layout}{How groups are arranged, either \code{"compact"} blocks or
-a \code{"cartogram"} that keeps the shape of each group. See details.}
+\item{group_layout}{How groups are arranged, as a layout function such as
+\code{\link[=layout_diffusion]{layout_diffusion()}}, \code{\link[=layout_compact]{layout_compact()}} or \code{\link[=layout_slice]{layout_slice()}}, optionally
+wrapped in \code{\link[=layout_repair]{layout_repair()}} to fix which groups touch.}
 
 \item{island_gap}{The distance, in hexagon widths, beyond which landmasses
 are tiled as separate islands. Use \code{Inf} to tile all land together.}
@@ -28,12 +28,6 @@ are tiled as separate islands. Use \code{Inf} to tile all land together.}
 \item{group_gap}{The width of the gap between groups, as a fraction of the
 hexagon width. The hexagons along group borders are trimmed to make this
 gap, so they are slightly smaller than other hexagons.}
-
-\item{group_anchor}{For the \code{"compact"} layout, a data frame with columns
-\code{group}, \code{x} and \code{y} giving positions (in the coordinates of \code{object}) to
-use in place of the centroids of some groups when arranging them. For
-example, moving a group's anchor east of its neighbour places its block
-on the east side of that neighbour.}
 }
 \value{
 \code{object} with its geometry replaced by hexagons.
@@ -52,26 +46,12 @@ Tasmania remain distinct from the mainland.
 When \code{group} is given, the hexagons of each group (e.g. state) are kept
 contiguous and a gap of \code{group_gap} hexagon widths is cut along the borders
 between groups, so that each group is visually distinct. Groups usually
-need a very different area of hexagons than they cover on the map (e.g.
-densely populated states have many small regions), so the outline of the
-map can't be kept. Instead, \code{group_layout} chooses how groups are arranged:
-\itemize{
-\item \code{"compact"} draws each group as a compact block of hexagons, in the
-style of hand drawn election maps. Each group is treated as a circle with
-the area of its hexagons, and the circles are arranged so that
-neighbouring groups keep their direction from each other (weighting
-longer shared borders more), then packed together without overlapping.
-The positions used for some groups can be changed with \code{group_anchor}
-to adjust the layout.
-\item \code{"cartogram"} keeps the shape of each group by warping the map into a
-continuous cartogram (Dougenik, Chrisman & Niemeyer, 1985) where each
-group's area is proportional to its number of regions. The hexagons tile
-this warped map, and are split between groups along the warped borders.
-Groups that shrink a lot can become thin.
-}
-
-Grouping works best for groups that are spatially contiguous, such as
-states.
+need a very different area of hexagons than they cover on the map, so the
+map is distorted to fit them, as chosen by \code{group_layout}. By default, the
+map is warped with a diffusion cartogram so that each group keeps its shape,
+and the borders between groups are then repaired so that groups touch as
+they do on the map. See \link{layouts} for the available layouts. Grouping works
+best for groups that are spatially contiguous, such as states.
 }
 \examples{
 library(sf)
@@ -81,11 +61,6 @@ library(ggplot2)
 ggplot(aec_hex) +
   geom_sf(aes(fill = winner))
 
-}
-\references{
-Dougenik, J. A., Chrisman, N. R., & Niemeyer, D. R. (1985). An algorithm to
-construct continuous area cartograms. \emph{The Professional Geographer},
-37(1), 75--81.
 }
 \seealso{
 \code{\link[=hex_grid]{hex_grid()}} to create the hexagons and \code{\link[=tile_allocate]{tile_allocate()}} to

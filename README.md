@@ -36,11 +36,12 @@ remotes::install_github("numbats/hexmap")
     algorithm. Optionally, regions can be grouped (e.g. by state) so
     that each group’s hexagons are contiguous.
 
-When grouping, `hexmap()` arranges each group as a compact block of
-hexagons by default, keeping neighbouring groups in their relative
-directions. Alternatively, `group_layout = "cartogram"` warps the map so
-that each group’s area is proportional to its number of regions, which
-keeps the shape of each group and the borders between them.
+When grouping, the map is first warped with a diffusion cartogram so
+that each group’s area matches its number of regions while keeping its
+shape (`layout_diffusion()`), and the borders between groups are then
+repaired so that groups touch as they do on the map (`layout_repair()`).
+Other layouts, such as compact blocks (`layout_compact()`) or a spatial
+treemap (`layout_slice()`), can be given to `group_layout`.
 
 `hexmap()` does both steps in one call.
 
@@ -122,9 +123,10 @@ ggplot(aec2025_hex) +
 
 Grouping the divisions by state keeps each state’s hexagons together,
 and a small gap along the state borders makes each state visually
-distinct. By default each state is drawn as a compact block, with the
-blocks arranged as the states are on the map, much like the hexagon maps
-used in election coverage.
+distinct. By default the map is warped so that each state’s area is
+closer to its number of divisions, which enlarges the densely populated
+south-east while Western Australia and the Northern Territory shrink.
+Each state keeps its shape and touches the same states as on the map.
 
 ``` r
 aec2025_state_hex <- hexmap(aec2025, group = state)
@@ -133,17 +135,29 @@ winner_map(aec2025_state_hex)
 
 <img src="man/figures/README-plot-hexmap-group-1.png" alt="" width="100%" />
 
-The `"cartogram"` layout instead keeps the shape of each state, by
-warping the map so that each state’s area is proportional to its number
-of divisions. This enlarges the densely populated south-east, while
-Western Australia and the Northern Territory shrink.
+Layouts are functions, so their options can be changed. `alpha` sets how
+far the map is warped, from keeping the outline of Australia
+(`alpha = 0`) to making each state’s area proportional to its number of
+divisions (`alpha = 1`). Other layouts can also be repaired, such as
+compact blocks in the style of election maps:
 
 ``` r
-aec2025_cartogram_hex <- hexmap(aec2025, group = state, group_layout = "cartogram")
-winner_map(aec2025_cartogram_hex)
+library(patchwork)
+layouts <- list(
+  "layout_diffusion(alpha = 0.25)" = layout_repair(layout_diffusion(alpha = 0.25)),
+  "layout_diffusion(alpha = 1)" = layout_repair(layout_diffusion(alpha = 1)),
+  "layout_compact()" = layout_repair(layout_compact())
+)
+maps <- lapply(names(layouts), function(name) {
+  ggplot(hexmap(aec2025, group = state, group_layout = layouts[[name]])) +
+    geom_sf(aes(fill = state), colour = "white", linewidth = 0.2, show.legend = FALSE) +
+    labs(title = name) +
+    theme_void()
+})
+wrap_plots(maps)
 ```
 
-<img src="man/figures/README-plot-hexmap-cartogram-1.png" alt="" width="100%" />
+<img src="man/figures/README-plot-hexmap-layouts-1.png" alt="" width="100%" />
 
 ## Related
 
