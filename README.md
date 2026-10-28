@@ -45,6 +45,8 @@ treemap (`layout_slice()`), can be given to `group_layout`.
 
 `hexmap()` does both steps in one call.
 
+The hexagons are regular and equally sized in the projection they are made in, which can be set with `crs`. Maps in longitude and latitude default to an equal-area projection centred on the map. Make them in the projection the map will be plotted in, and use an equal-area projection for hexagons that also cover equal areas on the ground. See `vignette("projections")` for details.
+
 ## Example: Australian federal election 2025
 
 The `aec2025` data is an `sf` object with simplified boundaries of the

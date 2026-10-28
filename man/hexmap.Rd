@@ -9,11 +9,13 @@ hexmap(
   group = NULL,
   group_layout = layout_repair(layout_diffusion()),
   island_gap = 0.5,
-  group_gap = 0.1
+  group_gap = 0.1,
+  crs = NULL
 )
 }
 \arguments{
-\item{object}{An sf object in a projected coordinate reference system.}
+\item{object}{An sf object in a projected or longitude/latitude
+coordinate reference system.}
 
 \item{group}{Optionally, a column of \code{object} (unquoted) that groups its
 regions (e.g. states).}
@@ -28,9 +30,16 @@ are tiled as separate islands. Use \code{Inf} to tile all land together.}
 \item{group_gap}{The width of the gap between groups, as a fraction of the
 hexagon width. The hexagons along group borders are trimmed to make this
 gap, so they are slightly smaller than other hexagons.}
+
+\item{crs}{The projected coordinate reference system to make the hexagons
+in, such as the one the map will be plotted in. \code{object} is transformed
+to \code{crs} with \code{\link[sf:st_transform]{sf::st_transform()}}. Defaults to the CRS of \code{object}, or
+for longitude/latitude input, to a Lambert azimuthal equal-area CRS
+centred on the data (\code{"+proj=laea +lat_0=... +lon_0=..."}).}
 }
 \value{
-\code{object} with its geometry replaced by hexagons.
+\code{object} with its geometry replaced by hexagons, in the coordinate reference
+system they were made in.
 }
 \description{
 Replaces each region of a map with a hexagon of equal size. The hexagons
@@ -52,14 +61,27 @@ map is warped with a diffusion cartogram so that each group keeps its shape,
 and the borders between groups are then repaired so that groups touch as
 they do on the map. See \link{layouts} for the available layouts. Grouping works
 best for groups that are spatially contiguous, such as states.
+
+The hexagons are regular and equally sized in the coordinate reference
+system (CRS) they are made in, which is the CRS of \code{object} unless \code{crs} is
+given, or a Lambert azimuthal equal-area CRS centred on the data for
+longitude/latitude input. The hexagons keep their location when plotted in
+another projection, but are stretched by it, so make the hexagons in the
+CRS you will plot in. Use an equal-area CRS for hexagons that also cover
+equal areas on the ground. See \code{vignette("projections")} for details.
 }
 \examples{
-library(sf)
-aec_hex <- hexmap(st_transform(aec2025, 3577), group = state)
+aec_hex <- hexmap(aec2025, group = state)
 
 library(ggplot2)
 ggplot(aec_hex) +
   geom_sf(aes(fill = winner))
+
+# Hexagons made for a globe centred on Australia
+globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
+ggplot(hexmap(aec2025, crs = globe)) +
+  geom_sf(aes(fill = winner)) +
+  coord_sf(crs = globe)
 
 }
 \seealso{

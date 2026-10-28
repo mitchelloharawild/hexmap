@@ -11,8 +11,10 @@
 #' distinct from the mainland.
 #'
 #' @param object An sf object or geometry to tile, in a projected coordinate
-#'   reference system. It is recommended to first simplify this geometry to
-#'   speed up the hexagon tiling.
+#'   reference system. The hexagons are regular and equally sized in this
+#'   coordinate reference system (see `vignette("projections")`). It is
+#'   recommended to first simplify this geometry to speed up the hexagon
+#'   tiling.
 #' @param n_tiles The number of tiles to use for representing the geometry.
 #' @param island_gap The distance, in hexagon widths, beyond which landmasses
 #'   are tiled as separate islands. Closer landmasses are tiled together. Use

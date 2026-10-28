@@ -19,7 +19,16 @@
 #' they do on the map. See [layouts] for the available layouts. Grouping works
 #' best for groups that are spatially contiguous, such as states.
 #'
-#' @param object An sf object in a projected coordinate reference system.
+#' The hexagons are regular and equally sized in the coordinate reference
+#' system (CRS) they are made in, which is the CRS of `object` unless `crs` is
+#' given, or a Lambert azimuthal equal-area CRS centred on the data for
+#' longitude/latitude input. The hexagons keep their location when plotted in
+#' another projection, but are stretched by it, so make the hexagons in the
+#' CRS you will plot in. Use an equal-area CRS for hexagons that also cover
+#' equal areas on the ground. See `vignette("projections")` for details.
+#'
+#' @param object An sf object in a projected or longitude/latitude
+#'   coordinate reference system.
 #' @param group Optionally, a column of `object` (unquoted) that groups its
 #'   regions (e.g. states).
 #' @param group_layout How groups are arranged, as a layout function such as
@@ -30,26 +39,44 @@
 #' @param group_gap The width of the gap between groups, as a fraction of the
 #'   hexagon width. The hexagons along group borders are trimmed to make this
 #'   gap, so they are slightly smaller than other hexagons.
+#' @param crs The projected coordinate reference system to make the hexagons
+#'   in, such as the one the map will be plotted in. `object` is transformed
+#'   to `crs` with [sf::st_transform()]. Defaults to the CRS of `object`, or
+#'   for longitude/latitude input, to a Lambert azimuthal equal-area CRS
+#'   centred on the data (`"+proj=laea +lat_0=... +lon_0=..."`).
 #'
 #' @return
-#' `object` with its geometry replaced by hexagons.
+#' `object` with its geometry replaced by hexagons, in the coordinate reference
+#' system they were made in.
 #'
 #' @seealso [hex_grid()] to create the hexagons and [tile_allocate()] to
 #'   allocate them to regions.
 #'
 #' @examples
-#' library(sf)
-#' aec_hex <- hexmap(st_transform(aec2025, 3577), group = state)
+#' aec_hex <- hexmap(aec2025, group = state)
 #'
 #' library(ggplot2)
 #' ggplot(aec_hex) +
 #'   geom_sf(aes(fill = winner))
 #'
+#' # Hexagons made for a globe centred on Australia
+#' globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
+#' ggplot(hexmap(aec2025, crs = globe)) +
+#'   geom_sf(aes(fill = winner)) +
+#'   coord_sf(crs = globe)
+#'
 #' @importFrom sf st_area st_geometry st_geometry<- st_point_on_surface
+#' @importFrom sf st_is_longlat st_transform
 #' @export
 hexmap <- function(object, group = NULL,
                    group_layout = layout_repair(layout_diffusion()),
-                   island_gap = 0.5, group_gap = 0.1) {
+                   island_gap = 0.5, group_gap = 0.1, crs = NULL) {
+  if (is.null(crs) && isTRUE(st_is_longlat(object))) {
+    crs <- equal_area_crs(object)
+    message("Making hexagons in the equal-area CRS \"", crs, "\". ",
+            "Use it with `coord_sf(crs = ...)`, or choose another with `crs`.")
+  }
+  if (!is.null(crs)) object <- st_transform(object, crs)
   check_projected(object)
   check_not_empty(object)
   group <- eval(substitute(group), attribute_data(object), parent.frame())
@@ -77,6 +104,22 @@ hexmap <- function(object, group = NULL,
   }
   st_geometry(object) <- tile
   object
+}
+
+# A Lambert azimuthal equal-area CRS centred on the bounding box of longlat
+# data, or on the centroid of the data if it spans more than 180 degrees of
+# longitude (such as data crossing the antimeridian)
+#' @importFrom sf sf_use_s2 st_bbox st_centroid st_coordinates
+equal_area_crs <- function(object) {
+  box <- st_bbox(object)
+  centre <- c((box[["xmin"]] + box[["xmax"]]) / 2, (box[["ymin"]] + box[["ymax"]]) / 2)
+  if (box[["xmax"]] - box[["xmin"]] > 180) {
+    s2 <- suppressMessages(sf_use_s2(TRUE))
+    on.exit(suppressMessages(sf_use_s2(s2)))
+    centre <- st_coordinates(st_centroid(st_union(st_geometry(object))))[1, 1:2]
+  }
+  centre <- round(centre, 2)
+  paste0("+proj=laea +lat_0=", centre[2], " +lon_0=", centre[1])
 }
 
 # Trims gap / 2 from each tile along the borders it shares with other groups

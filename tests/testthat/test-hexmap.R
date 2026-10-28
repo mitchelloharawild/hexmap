@@ -208,7 +208,8 @@ test_that("hexmap() separates groups with a gap", {
 })
 
 test_that("inputs are validated", {
-  expect_error(hexmap(aec2025), "projected")
+  no_crs <- sf::st_set_crs(aec, NA)
+  expect_error(hexmap(no_crs), "projected")
   expect_error(tile_allocate(aec, hex_grid(aec, n_tiles = 10)), "exactly one")
   expect_error(hexmap(aec, group = state[1:3]), "one value for each row")
   empty <- aec[1:3, ]
@@ -229,4 +230,47 @@ test_that("inputs are validated", {
   expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")
   expect_error(hexmap(aec, group = state, group_layout = "compact"), "layout function")
+})
+
+# Ratio of the shortest to the longest edge of each hexagon
+edge_ratio <- function(hex) {
+  vapply(sf::st_geometry(hex), function(p) {
+    xy <- p[[1]]
+    edge <- sqrt(rowSums(diff(xy)^2))
+    min(edge) / max(edge)
+  }, numeric(1))
+}
+
+test_that("crs sets the coordinate reference system of the hexagons", {
+  expect_equal(hexmap(aec2025, crs = 3577), hexmap(aec))
+
+  globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
+  hex <- hexmap(aec2025, crs = globe)
+  expect_equal(sf::st_crs(hex), sf::st_crs(globe))
+  expect_gt(min(edge_ratio(hex)), 1 - 1e-6)
+  # Hexagons made in another CRS are stretched by the globe
+  expect_lt(min(edge_ratio(sf::st_transform(hexmap(aec), globe))), 0.99)
+})
+
+test_that("longlat input defaults to an equal-area CRS centred on the data", {
+  expect_message(hex <- hexmap(aec2025), "+proj=laea", fixed = TRUE)
+  crs <- sf::st_crs(hex)
+  expect_match(crs$proj4string, "+proj=laea", fixed = TRUE)
+  expect_false(sf::st_is_longlat(hex))
+  # The hexagons cover equal areas on the ground
+  area <- as.numeric(sf::st_area(sf::st_transform(hex, "OGC:CRS84")))
+  expect_lt(max(area) / min(area), 1.02)
+
+  # Projected input keeps its CRS
+  expect_no_message(hex <- hexmap(aec))
+  expect_equal(sf::st_crs(hex), sf::st_crs(aec))
+
+  # Data crossing the antimeridian is centred near it
+  square <- function(x) sf::st_polygon(list(cbind(x + c(0, 1, 1, 0, 0), c(0, 0, 1, 1, 0))))
+  fiji <- sf::st_sf(id = 1:4, geometry = sf::st_sfc(
+    square(178), square(179), square(-180), square(-179), crs = 4326
+  ))
+  expect_message(hex <- hexmap(fiji), "+lon_0=", fixed = TRUE)
+  lon_0 <- as.numeric(sub(".*\\+lon_0=(\\S+).*", "\\1", sf::st_crs(hex)$proj4string))
+  expect_gt(abs(lon_0), 179)
 })

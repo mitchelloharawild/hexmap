@@ -8,8 +8,10 @@ hex_grid(object, n_tiles = 100, island_gap = 0.5)
 }
 \arguments{
 \item{object}{An sf object or geometry to tile, in a projected coordinate
-reference system. It is recommended to first simplify this geometry to
-speed up the hexagon tiling.}
+reference system. The hexagons are regular and equally sized in this
+coordinate reference system (see \code{vignette("projections")}). It is
+recommended to first simplify this geometry to speed up the hexagon
+tiling.}
 
 \item{n_tiles}{The number of tiles to use for representing the geometry.}
 
