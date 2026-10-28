@@ -23,6 +23,15 @@ library(sf)
 library(ggplot2)
 ```
 
+The examples use the Australian federal electoral divisions from the ozmaps package, without offshore territories, and the state of each division:
+
+```{r data, warning = FALSE}
+ced <- st_crop(ozmaps::abs_ced, xmin = 112, ymin = -44, xmax = 154, ymax = -9)
+states <- ozmaps::abs_ste
+names(states)[1] <- "state"
+ced <- st_join(st_make_valid(ced), st_make_valid(states), largest = TRUE)
+```
+
 ```{r helpers, include = FALSE}
 library(patchwork)
 hex_map <- function(hex, crs = st_crs(hex), title = NULL) {
@@ -44,8 +53,8 @@ A hexagon map is drawn on a flat surface, but the regions it represents lie on t
 `hexmap()` makes regular, equally sized hexagons in the plane of a projected coordinate reference system (CRS). This is the CRS of the map, or the one given with `crs`. A map in longitude and latitude has no plane to make hexagons in, so by default it is projected with the Lambert azimuthal equal-area projection centred on the map, and a message names the CRS chosen. The hexagons are ordinary `sf` polygons, so they keep their location on the Earth and can be plotted with `geom_sf()` in any projection. They only look regular when plotted in the projection they were made in, and only cover equal areas on the ground when that projection is equal-area.
 
 ```{r albers}
-aec_hex <- hexmap(aec2025, group = state, crs = 3577)
-ggplot(aec_hex) +
+ced_hex <- hexmap(ced, group = state, crs = 3577)
+ggplot(ced_hex) +
   geom_sf(aes(fill = state))
 ```
 
@@ -54,7 +63,7 @@ ggplot(aec_hex) +
 Plotting the hexagons in another projection moves each of their corners to its new position, so the hexagons stay in place but are stretched with the land beneath them. For example, on a globe centred on Australia:
 
 ```{r ortho}
-ggplot(aec_hex) +
+ggplot(ced_hex) +
   geom_sf(aes(fill = state)) +
   coord_sf(crs = "+proj=ortho +lat_0=-25 +lon_0=134")
 ```
@@ -68,7 +77,7 @@ displays <- list(
   "Longitude and latitude (EPSG:4326)" = 4326,
   "Web Mercator (EPSG:3857)" = 3857
 )
-wrap_plots(Map(hex_map, list(aec_hex), displays, names(displays)))
+wrap_plots(Map(hex_map, list(ced_hex), displays, names(displays)))
 ```
 
 A globe centred on Australia is close to the Albers projection across the continent, so the hexagons are barely changed. Longitude and latitude shears them, and Web Mercator keeps their shape but enlarges them towards the south.
@@ -79,7 +88,7 @@ On a globe centred away from Australia, the continent is foreshortened towards t
 
 ```{r globe}
 globe <- "+proj=ortho +lat_0=0 +lon_0=90"
-globe_hex <- hexmap(aec2025, group = state, crs = globe)
+globe_hex <- hexmap(ced, group = state, crs = globe)
 ggplot(globe_hex) +
   geom_sf(aes(fill = state))
 ```
@@ -87,7 +96,7 @@ ggplot(globe_hex) +
 Compared with the Albers hexagons plotted on the same globe:
 
 ```{r globe-compare, echo = FALSE, fig.height = 3.5}
-hex_map(aec_hex, globe, "Made in EPSG:3577") +
+hex_map(ced_hex, globe, "Made in EPSG:3577") +
   hex_map(globe_hex, globe, "Made on the globe")
 ```
 

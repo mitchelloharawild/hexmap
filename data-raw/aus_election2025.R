@@ -1,4 +1,4 @@
-## Code to prepare the `aec2025` dataset
+## Code to prepare the `aus_election2025` dataset
 library(sf)
 library(dplyr)
 library(rmapshaper)
@@ -15,31 +15,28 @@ download.file(
 unzip(tmp_zip, exdir = tmp_dir)
 
 # Clip offshore territories (Christmas, Cocos and Norfolk Islands) so that the
-# map extent covers the mainland and Tasmania.
+# map covers the mainland and Tasmania, and simplify the borders
 mainland <- st_bbox(c(xmin = 112, ymin = -44, xmax = 154, ymax = -9),
                     crs = st_crs(7844))
-
-elec_map_2025 <- read_sf(file.path(tmp_dir, "CED_2025_AUST_GDA2020.shp")) |>
+divisions <- read_sf(file.path(tmp_dir, "CED_2025_AUST_GDA2020.shp")) |>
   filter(!st_is_empty(geometry)) |>
-  select(division = CED_NAME25, area = AREASQKM) |>
+  select(division = CED_NAME25) |>
   st_crop(mainland) |>
   ms_simplify(keep = 0.002, keep_shapes = TRUE) |>
   st_make_valid()
 
+# The party that won each division (Australian Electoral Commission)
 winners <- read.csv(
   "https://results.aec.gov.au/31496/Website/Downloads/HouseMembersElectedDownload-31496.csv",
   skip = 1
 ) |>
-  select(state = StateAb, division = DivisionNm, party = PartyAb)
+  select(division = DivisionNm, state = StateAb, party = PartyAb)
 
-aec2025 <- elec_map_2025 |>
+aus_election2025 <- divisions |>
   inner_join(winners, by = "division") |>
-  mutate(winner = case_when(party %in% "ALP" ~ "ALP",
-                            party %in% c("GRN", "GVIC") ~ "GRN",
-                            party %in% c("LNP", "NP", "LP") ~ "LNP",
-                            TRUE ~ "Other")) |>
-  select(division, area, state, party, winner)
+  select(division, state, party) |>
+  arrange(division)
 
-stopifnot(nrow(aec2025) == 150)
+stopifnot(nrow(aus_election2025) == 150)
 
-usethis::use_data(aec2025, overwrite = TRUE)
+usethis::use_data(aus_election2025, overwrite = TRUE)

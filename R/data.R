@@ -1,26 +1,23 @@
-#' Australian federal election map and winners
+#' Australian federal election 2025
 #'
-#' Simplified Australian federal electoral division boundaries and the party
-#' that won each division at the 2022 (`aec2022`) and 2025 (`aec2025`)
-#' Australian federal elections.
+#' The boundaries of the 150 electoral divisions used at the 3 May 2025
+#' Australian federal election, and the party that won each division. The
+#' boundaries are simplified, and exclude the offshore territories (Christmas,
+#' Cocos and Norfolk Islands).
 #'
-#' @format An sf object with one row per electoral division and columns:
+#' @format An sf object in longitude and latitude (GDA2020), with one row per
+#' electoral division and columns:
 #' \describe{
 #'   \item{division}{Name of the electoral division.}
-#'   \item{area}{Area of the division in square kilometres.}
 #'   \item{state}{State or territory abbreviation.}
-#'   \item{party}{Abbreviation of the winning candidate's party.}
-#'   \item{winner}{Winning party grouped into ALP, LNP (Liberal/National
-#'     Coalition), GRN (Greens) and Other.}
+#'   \item{party}{Abbreviation of the winning candidate's party, such as
+#'     `"ALP"` (Labor), `"LP"` (Liberal), `"LNP"` (Liberal National),
+#'     `"NP"` (National), `"GRN"` (Greens) and `"IND"` (independent).}
 #'   \item{geometry}{Boundary of the division.}
 #' }
 #'
-#' @source The data incorporates electoral boundary data and election result
-#' data from © Commonwealth of Australia (Australian Electoral Commission)
-#' \url{https://www.aec.gov.au/} and boundaries from the Australian Bureau of
-#' Statistics \url{https://www.abs.gov.au/} (2025), licensed under CC BY 4.0.
-#' @name aec
-"aec2022"
-
-#' @rdname aec
-"aec2025"
+#' @source Election results from the Australian Electoral Commission
+#' \url{https://results.aec.gov.au/} and boundaries from the Australian Bureau
+#' of Statistics \url{https://www.abs.gov.au/} (ASGS Edition 3), licensed under
+#' CC BY 4.0.
+"aus_election2025"

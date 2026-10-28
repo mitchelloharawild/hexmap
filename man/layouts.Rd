@@ -97,17 +97,26 @@ hexagons should be contiguous on each landmass.
 }
 
 \examples{
+\dontshow{if (requireNamespace("ozmaps", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(sf)
-aec <- st_transform(aec2025, 3577)
+# Australian electoral divisions without offshore territories, and their state
+ced <- st_crop(ozmaps::abs_ced, xmin = 112, ymin = -44, xmax = 154, ymax = -9)
+ced <- st_simplify(st_transform(ced, 3577), dTolerance = 1000)
+states <- st_transform(ozmaps::abs_ste, 3577)
+names(states)[1] <- "state"
+ced <- st_join(ced, states, largest = TRUE)
+
 # Keep more of the outline of Australia
-aec_hex <- hexmap(aec, group = state,
+ced_hex <- hexmap(ced, group = state,
                   group_layout = layout_repair(layout_diffusion(alpha = 0.5)))
 # Compact blocks, with the ACT on the east side of NSW
-nsw <- st_coordinates(st_centroid(st_union(aec[aec$state == "NSW", ])))
-anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-aec_hex <- hexmap(aec, group = state, group_layout = layout_compact(anchor = anchor))
+nsw <- st_coordinates(st_centroid(st_union(ced[ced$state == "New South Wales", ])))
+anchor <- data.frame(group = "Australian Capital Territory",
+                     x = nsw[1] + 5e5, y = nsw[2])
+ced_hex <- hexmap(ced, group = state, group_layout = layout_compact(anchor = anchor))
 # Compact blocks that touch as the states do
-aec_hex <- hexmap(aec, group = state, group_layout = layout_repair(layout_compact()))
+ced_hex <- hexmap(ced, group = state, group_layout = layout_repair(layout_compact()))
+\dontshow{\}) # examplesIf}
 }
 \references{
 Gastner, M. T., & Newman, M. E. J. (2004). Diffusion-based method for

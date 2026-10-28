@@ -71,18 +71,27 @@ CRS you will plot in. Use an equal-area CRS for hexagons that also cover
 equal areas on the ground. See \code{vignette("projections")} for details.
 }
 \examples{
-aec_hex <- hexmap(aec2025, group = state)
+\dontshow{if (requireNamespace("ozmaps", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+library(sf)
+# Australian electoral divisions without offshore territories, and their state
+ced <- st_crop(ozmaps::abs_ced, xmin = 112, ymin = -44, xmax = 154, ymax = -9)
+ced <- st_simplify(st_transform(ced, 3577), dTolerance = 1000)
+states <- st_transform(ozmaps::abs_ste, 3577)
+names(states)[1] <- "state"
+ced <- st_join(ced, states, largest = TRUE)
+
+ced_hex <- hexmap(ced, group = state)
 
 library(ggplot2)
-ggplot(aec_hex) +
-  geom_sf(aes(fill = winner))
+ggplot(ced_hex) +
+  geom_sf(aes(fill = state))
 
 # Hexagons made for a globe centred on Australia
 globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
-ggplot(hexmap(aec2025, crs = globe)) +
-  geom_sf(aes(fill = winner)) +
+ggplot(hexmap(ced, crs = globe)) +
+  geom_sf(aes(fill = state)) +
   coord_sf(crs = globe)
-
+\dontshow{\}) # examplesIf}
 }
 \seealso{
 \code{\link[=hex_grid]{hex_grid()}} to create the hexagons and \code{\link[=tile_allocate]{tile_allocate()}} to
