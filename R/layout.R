@@ -33,7 +33,10 @@
 #' borders (by simulated annealing), which keeps the hexagons of the layout,
 #' and keeps each group's hexagons contiguous and compact. The default layout
 #' is `layout_repair(layout_diffusion())`. Repairing a slice layout bends its
-#' straight borders.
+#' straight borders. With `border`, the regions are then placed on their
+#' group's hexagons keeping their distances to borders as well as their
+#' positions: regions near the coast or another group stay near it, and
+#' regions away from borders stay away from them.
 #'
 #' @section Custom layouts:
 #' A layout is a function with arguments `geometry` (the regions' geometry),
@@ -59,6 +62,13 @@
 #'   cities). With 0, only the shapes are used.
 #' @param layout A layout function to repair, such as `layout_compact()`.
 #' @param iterations The number of swaps to try, per hexagon.
+#' @param border How much to keep each region's distance to borders (the coast
+#'   and each other group) when placing it, relative to keeping its position.
+#'   Distances are measured from each region's polygon, in hexagon widths, and
+#'   only up to 3 widths, so only regions near a border are held to it. With
+#'   `border = 1`, a region one hexagon further from a border than on the map
+#'   is as bad as a region one hexagon from its position. Larger values keep
+#'   borders at the expense of the order of regions within groups.
 #' @param anchor A data frame with columns `group`, `x` and `y` giving
 #'   positions (in the coordinates of the map) to use in place of the
 #'   centroids of some groups when arranging them. For example, moving a
@@ -139,13 +149,14 @@ layout_slice <- function(tree = NULL, anchor = NULL) {
 
 #' @rdname layouts
 #' @export
-layout_repair <- function(layout, iterations = 30) {
+layout_repair <- function(layout, iterations = 30, border = 0) {
   check_layout(layout)
   check_number(iterations, 0, Inf)
+  check_number(border, 0, Inf)
   function(geometry, group, land, cellsize) {
     tile <- layout(geometry, group, land, cellsize)
     repair_groups(tile, geometry, group, land$region,
-                  iterations = round(iterations * length(tile)))
+                  iterations = round(iterations * length(tile)), border = border)
   }
 }
 

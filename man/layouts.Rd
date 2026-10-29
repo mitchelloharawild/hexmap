@@ -14,7 +14,7 @@ layout_compact(anchor = NULL)
 
 layout_slice(tree = NULL, anchor = NULL)
 
-layout_repair(layout, iterations = 30)
+layout_repair(layout, iterations = 30, border = 0)
 }
 \arguments{
 \item{alpha}{How far to warp the map, from 0 (keep the outline of the map)
@@ -51,6 +51,14 @@ states. Every group must appear exactly once.}
 \item{layout}{A layout function to repair, such as \code{layout_compact()}.}
 
 \item{iterations}{The number of swaps to try, per hexagon.}
+
+\item{border}{How much to keep each region's distance to borders (the coast
+and each other group) when placing it, relative to keeping its position.
+Distances are measured from each region's polygon, in hexagon widths, and
+only up to 3 widths, so only regions near a border are held to it. With
+\code{border = 1}, a region one hexagon further from a border than on the map
+is as bad as a region one hexagon from its position. Larger values keep
+borders at the expense of the order of regions within groups.}
 }
 \value{
 A layout function, for the \code{group_layout} argument of \code{\link[=hexmap]{hexmap()}}.
@@ -92,7 +100,10 @@ don't touch where they don't. Pairs of hexagons are swapped across group
 borders (by simulated annealing), which keeps the hexagons of the layout,
 and keeps each group's hexagons contiguous and compact. The default layout
 is \code{layout_repair(layout_diffusion())}. Repairing a slice layout bends its
-straight borders.
+straight borders. With \code{border}, the regions are then placed on their
+group's hexagons keeping their distances to borders as well as their
+positions: regions near the coast or another group stay near it, and
+regions away from borders stay away from them.
 }
 \section{Custom layouts}{
 

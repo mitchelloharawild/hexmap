@@ -5,8 +5,11 @@
 # the real map (0) to a cartogram (1). The hexagons tile the warped
 # landmasses, and are split between groups along the warped borders.
 #
-# Returns the tile of each region.
-#' @importFrom sf st_area st_make_valid st_point_on_surface st_union
+# Returns the tile of each region, with the warped point that each region was
+# allocated from as the attribute "point", and the function that warps
+# geometries as the attribute "warp" (both used by repair_groups()).
+#' @importFrom sf st_area st_coordinates st_make_valid st_point_on_surface
+#' @importFrom sf st_union
 diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
                             resolution = 256, proximity = 0.1, passes = 3) {
   id <- as.integer(factor(group, exclude = NULL))
@@ -45,7 +48,10 @@ diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
   grid <- landmass_grid(land_shape, n, cellsize)
   index <- allocate_tiles(point, grid$tile, group, land$region, grid$landmass,
                           warped[id], proximity)
-  grid$tile[index]
+  tile <- grid$tile[index]
+  attr(tile, "point") <- st_coordinates(point)
+  attr(tile, "warp") <- warp
+  tile
 }
 
 # Finds the diffusion cartogram (Gastner & Newman, 2004) that resizes each

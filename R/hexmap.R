@@ -103,6 +103,8 @@ hexmap <- function(object, group = NULL,
                                      grid$landmass)]
   } else {
     tile <- group_layout(geometry, group, land, cellsize)
+    attr(tile, "point") <- NULL
+    attr(tile, "warp") <- NULL
     # Layouts may change the size of the hexagons
     cellsize <- sqrt(2 * stats::median(as.numeric(st_area(tile))) / sqrt(3))
   }

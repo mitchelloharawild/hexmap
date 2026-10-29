@@ -94,6 +94,31 @@ test_that("layout_repair() fixes the borders of other layouts", {
   expect_setequal(sf::st_geometry(hex), sf::st_geometry(compact))
 })
 
+# Share of regions that touch another state on the map whose hexagon touches
+# that state's hexagons
+border_kept <- function(hex) {
+  state <- unique(ced$state)
+  shape <- do.call(c, lapply(state, function(s) sf::st_union(ced[ced$state == s, ])))
+  on_map <- sf::st_is_within_distance(ced, shape, 1000, sparse = FALSE)
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  centre <- sf::st_centroid(sf::st_geometry(hex))
+  near <- sf::st_is_within_distance(centre, dist = 1.2 * size)
+  on_hex <- t(vapply(near, function(k) state %in% hex$state[k], logical(length(state))))
+  other <- outer(ced$state, state, "!=")
+  sum(on_map & on_hex & other) / sum(on_map & other)
+}
+
+test_that("border keeps regions on the borders between states", {
+  hex <- hexmap(ced, group = state, group_gap = 0)
+  kept <- hexmap(ced, group = state, group_gap = 0,
+                 group_layout = layout_repair(layout_diffusion(), border = 2))
+  # Only the placement within each state changes
+  for (s in unique(ced$state)) {
+    expect_setequal(sf::st_geometry(kept)[kept$state == s], sf::st_geometry(hex)[hex$state == s])
+  }
+  expect_gt(border_kept(kept), border_kept(hex))
+})
+
 test_that("the diffusion layout keeps the outline of the map without warping", {
   hex <- hexmap(ced, group = state, group_layout = layout_diffusion(alpha = 0),
                 group_gap = 0)
@@ -229,6 +254,7 @@ test_that("inputs are validated", {
   expect_error(slice(list("WA", "NT")), "missing groups")
   expect_error(slice(list(unique(ced$state), "WA")), "more than once: WA")
   expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
+  expect_error(layout_repair(layout_compact(), border = -1), "`border`")
   expect_error(layout_diffusion(proximity = -1), "`proximity`")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")
   expect_error(hexmap(ced, group = state, group_layout = "compact"), "layout function")
