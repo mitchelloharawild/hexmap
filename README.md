@@ -41,12 +41,13 @@ hexmap(electorates, group = state)
 - **Groups.** With `group`, the hexagons of each group (such as a state)
   are kept together, separated by a small gap (`group_gap`), and touch
   the same neighbouring groups as on the map.
-- **Group layouts.** `group_layout` sets how groups are arranged: warped
-  into a cartogram that keeps each group’s shape (`layout_diffusion()`,
-  the default), compact blocks (`layout_compact()`), a spatial treemap
-  (`layout_slice()`), or groups that keep their own shapes at the
-  expense of the overall outline (`layout_hierarchy()`).
-  `layout_repair()` fixes the borders between groups of any layout.
+- **Group layouts.** `group_layout` sets how groups are arranged: groups
+  that keep their own shapes and positions (`layout_hierarchy()`, the
+  default), a cartogram that keeps more of the overall outline
+  (`layout_diffusion()`), compact blocks (`layout_compact()`), or a
+  spatial treemap (`layout_slice()`). `layout_repair()` fixes the
+  borders between groups of any layout. See `vignette("layouts")` for
+  how they compare.
 - **Islands.** Distant landmasses, such as Tasmania, are tiled
   separately and kept apart from the mainland (`island_gap`).
 - **Projections.** Hexagons are regular in the projection they are made

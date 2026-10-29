@@ -62,9 +62,9 @@ centre_of <- function(x) {
   apply(xy, 2, function(v) tapply(v, x$state, mean))
 }
 
-layouts <- list(layout_repair(layout_diffusion()), layout_diffusion(alpha = 0),
+layouts <- list(layout_hierarchy(), layout_repair(layout_diffusion()), layout_diffusion(alpha = 0),
                 layout_diffusion(alpha = 1), layout_compact(),
-                layout_repair(layout_compact()), layout_slice(), layout_hierarchy())
+                layout_repair(layout_compact()), layout_slice())
 
 # The pairs of states whose tiles touch
 touching <- function(hex) {
@@ -78,7 +78,8 @@ borders <- c("ACT-NSW", "NSW-QLD", "NSW-SA", "NSW-VIC", "NT-QLD", "NT-SA", "NT-W
              "QLD-SA", "SA-VIC", "SA-WA")
 
 test_that("the diffusion layout keeps the borders between states", {
-  hex <- hexmap(ced, group = state, group_gap = 0)
+  hex <- hexmap(ced, group = state, group_layout = layout_repair(layout_diffusion()),
+                group_gap = 0)
   expect_equal(touching(hex), borders)
   # Without repair, the borders are close but not exact
   hex <- hexmap(ced, group = state, group_layout = layout_diffusion(), group_gap = 0)
@@ -94,8 +95,8 @@ test_that("layout_repair() fixes the borders of other layouts", {
   expect_setequal(sf::st_geometry(hex), sf::st_geometry(compact))
 })
 
-test_that("the hierarchy layout keeps borders, and the ACT inside NSW", {
-  hex <- hexmap(ced, group = state, group_layout = layout_hierarchy(), group_gap = 0)
+test_that("the default hierarchy layout keeps borders, and the ACT inside NSW", {
+  hex <- hexmap(ced, group = state, group_gap = 0)
   expect_equal(touching(hex), borders)
   # Every hexagon of the ACT is surrounded by hexagons
   size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
@@ -123,7 +124,8 @@ border_kept <- function(hex) {
 }
 
 test_that("border keeps regions on the borders between states", {
-  hex <- hexmap(ced, group = state, group_gap = 0)
+  hex <- hexmap(ced, group = state, group_layout = layout_repair(layout_diffusion()),
+                group_gap = 0)
   kept <- hexmap(ced, group = state, group_gap = 0,
                  group_layout = layout_repair(layout_diffusion(), border = 2))
   # Only the placement within each state changes

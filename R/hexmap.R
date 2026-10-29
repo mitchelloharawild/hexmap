@@ -14,10 +14,11 @@
 #' between groups, so that each group is visually distinct. Groups usually
 #' need a very different area of hexagons than they cover on the map, so the
 #' map is distorted to fit them, as chosen by `group_layout`. By default, the
-#' map is warped with a diffusion cartogram so that each group keeps its shape,
-#' and the borders between groups are then repaired so that groups touch as
-#' they do on the map. See [layouts] for the available layouts. Grouping works
-#' best for groups that are spatially contiguous, such as states.
+#' groups are laid out first, keeping each group's shape and touching the
+#' groups it borders on the map, and the regions are then placed within each
+#' group. See [layouts] for the available layouts, and
+#' `vignette("layouts")` for how they compare. Grouping works best for groups
+#' that are spatially contiguous, such as states.
 #'
 #' The hexagons are regular and equally sized in the coordinate reference
 #' system (CRS) they are made in, which is the CRS of `object` unless `crs` is
@@ -32,8 +33,9 @@
 #' @param group Optionally, a column of `object` (unquoted) that groups its
 #'   regions (e.g. states).
 #' @param group_layout How groups are arranged, as a layout function such as
-#'   [layout_diffusion()], [layout_compact()] or [layout_slice()], optionally
-#'   wrapped in [layout_repair()] to fix which groups touch.
+#'   [layout_hierarchy()] (the default), [layout_diffusion()],
+#'   [layout_compact()] or [layout_slice()], optionally wrapped in
+#'   [layout_repair()] to fix which groups touch.
 #' @param island_gap The distance, in hexagon widths, beyond which landmasses
 #'   are tiled as separate islands. Use `Inf` to tile all land together.
 #' @param group_gap The width of the gap between groups, as a fraction of the
@@ -77,7 +79,7 @@
 #' @importFrom sf st_is_longlat st_transform
 #' @export
 hexmap <- function(object, group = NULL,
-                   group_layout = layout_repair(layout_diffusion()),
+                   group_layout = layout_hierarchy(),
                    island_gap = 0.5, group_gap = 0.1, crs = NULL) {
   if (is.null(crs) && isTRUE(st_is_longlat(object))) {
     crs <- equal_area_crs(object)

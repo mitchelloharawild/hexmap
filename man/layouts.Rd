@@ -76,18 +76,30 @@ These functions create a layout for the \code{group_layout} argument of
 \code{\link[=hexmap]{hexmap()}}, which arranges the hexagons of each group (e.g. state). Groups
 usually need a very different area of hexagons than they cover on the map
 (e.g. densely populated states have many small regions), so the map has to
-be distorted, and each layout distorts it differently.
+be distorted, and each layout distorts it differently. See
+\code{vignette("layouts")} for how they compare.
 }
 \details{
 \itemize{
-\item \code{layout_diffusion()} (the default) warps the map with a diffusion
-cartogram (Gastner & Newman, 2004), which grows or shrinks each group
-while keeping its shape and its borders with other groups. The hexagons
-tile the warped map, and are split between groups along the warped
-borders. \code{alpha} sets how far the map is warped: with \code{alpha = 0} the
-outline of the map is kept and groups are squeezed into it, while with
-\code{alpha = 1} the area of each group is proportional to its number of
-regions and the outline is distorted to fit.
+\item \code{layout_hierarchy()} (the default) lays out the groups first, then the
+regions within each group. The groups are warped by a diffusion cartogram,
+blended towards a scaled copy of each group's own shape, so that groups
+keep their shapes while still touching their neighbours, at the expense of
+the outline of the whole map. The hexagons are split between groups
+nearest to these shapes, keeping groups with little coast (such as the
+ACT) off the edge of the hexagons, and the borders between groups are
+adjusted (by simulated annealing) so that groups touch as they do on the
+map. Regions are then placed within each group by matching the spread of
+the group on the map to the spread of its hexagons, so each group's
+regions keep their positions within it.
+\item \code{layout_diffusion()} warps the map with a diffusion cartogram (Gastner &
+Newman, 2004), which grows or shrinks each group while keeping its shape
+and its borders with other groups. The hexagons tile the warped map, and
+are split between groups along the warped borders. \code{alpha} sets how far
+the map is warped: with \code{alpha = 0} the outline of the map is kept and
+groups are squeezed into it, while with \code{alpha = 1} the area of each
+group is proportional to its number of regions and the outline is
+distorted to fit.
 \item \code{layout_compact()} draws each group as a compact block of hexagons, in
 the style of hand drawn election maps. Each group is treated as a circle
 with the area of its hexagons, and the circles are arranged so that
@@ -100,17 +112,6 @@ two between rows or columns of hexagons, giving each side exactly the
 hexagons of its groups. Each cut is chosen so that neighbouring groups
 keep their relative position (e.g. one above the other for a horizontal
 cut) and pieces don't become thin.
-\item \code{layout_hierarchy()} lays out the groups first, then the regions within
-each group. The groups are warped by a diffusion cartogram, blended
-towards a scaled copy of each group's own shape, so that groups keep their
-shapes while still touching their neighbours, at the expense of the
-outline of the whole map. The hexagons are split between groups nearest
-to these shapes, keeping groups with little coast (such as the ACT) off
-the edge of the hexagons, and the borders between groups are adjusted (by
-simulated annealing) so that groups touch as they do on the map. Regions
-are then placed within each group by matching the spread of the group on
-the map to the spread of its hexagons, so each group's regions keep their
-positions within it.
 }
 
 \code{layout_repair()} wraps any layout to then adjust the borders between
@@ -144,6 +145,8 @@ states <- st_transform(ozmaps::abs_ste, 3577)
 names(states)[1] <- "state"
 ced <- st_join(ced, states, largest = TRUE)
 
+# Each state keeps its shape, at the expense of the outline of Australia
+ced_hex <- hexmap(ced, group = state, group_layout = layout_hierarchy())
 # Keep more of the outline of Australia
 ced_hex <- hexmap(ced, group = state,
                   group_layout = layout_repair(layout_diffusion(alpha = 0.5)))
@@ -152,8 +155,6 @@ nsw <- st_coordinates(st_centroid(st_union(ced[ced$state == "New South Wales", ]
 anchor <- data.frame(group = "Australian Capital Territory",
                      x = nsw[1] + 5e5, y = nsw[2])
 ced_hex <- hexmap(ced, group = state, group_layout = layout_compact(anchor = anchor))
-# Each state keeps its shape, at the expense of the outline of Australia
-ced_hex <- hexmap(ced, group = state, group_layout = layout_hierarchy())
 # Compact blocks that touch as the states do
 ced_hex <- hexmap(ced, group = state, group_layout = layout_repair(layout_compact()))
 \dontshow{\}) # examplesIf}
