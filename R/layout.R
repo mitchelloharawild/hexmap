@@ -143,20 +143,24 @@
 #' # The 2025 Australian federal election, in Australian Albers
 #' election <- st_transform(aus_election_2025, 3577)
 #'
+#' # Compact blocks, with the ACT on the east side of NSW
+#' nsw <- st_coordinates(st_centroid(st_union(election[election$state == "NSW", ])))
+#' anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
+#' election_hex <- hexmap(election, group = state,
+#'                        group_layout = layout_compact(anchor = anchor))
+#'
+#' \donttest{
+#' # The other layouts take a few seconds each
 #' # Each state keeps its shape, at the expense of the outline of Australia
 #' election_hex <- hexmap(election, group = state,
 #'                        group_layout = layout_hierarchy())
 #' # Keep more of the outline of Australia
 #' election_hex <- hexmap(election, group = state,
 #'                        group_layout = layout_diffusion(cartogram = 0.5))
-#' # Compact blocks, with the ACT on the east side of NSW
-#' nsw <- st_coordinates(st_centroid(st_union(election[election$state == "NSW", ])))
-#' anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-#' election_hex <- hexmap(election, group = state,
-#'                        group_layout = layout_compact(anchor = anchor))
 #' # Compact blocks that touch as the states do
 #' election_hex <- hexmap(election, group = state,
 #'                        group_layout = layout_repair(layout_compact()))
+#' }
 #' @name layouts
 NULL
 

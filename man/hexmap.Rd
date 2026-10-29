@@ -82,25 +82,35 @@ equal areas on the ground. See \code{vignette("projections")} for details.
 library(sf)
 # The 2025 Australian federal election, in the Australian Albers projection
 election <- st_transform(aus_election_2025, 3577)
-election_hex <- hexmap(election, group = state)
+# A hexagon for each electoral division
+election_hex <- hexmap(election)
 
 # Every column of the map is kept, in the same order
 head(election_hex)
+
+\donttest{
+# Keep the divisions of each state together (takes a few seconds)
+election_hex <- hexmap(election, group = state)
+}
 
 \dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(ggplot2)
 ggplot(election_hex) +
   geom_sf(aes(fill = party))
 
+\donttest{
 # Hexagons made for a globe centred on Australia
 globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
 ggplot(hexmap(election, group = state, crs = globe)) +
   geom_sf(aes(fill = state)) +
   coord_sf(crs = globe)
+}
 \dontshow{\}) # examplesIf}
 \dontshow{if (requireNamespace("dplyr", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+\donttest{
 # Add the hexagons as a second geometry column, alongside the regions
 election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
+}
 \dontshow{\}) # examplesIf}
 }
 \seealso{
