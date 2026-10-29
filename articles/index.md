@@ -3,6 +3,6 @@
 ### All vignettes
 
 - [Choosing a layout for
-  groups](https://numbats.github.io/hexmap/articles/layouts.md):
+  groups](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.md):
 - [Hexagon maps and map
-  projections](https://numbats.github.io/hexmap/articles/projections.md):
+  projections](https://pkg.mitchelloharawild.com/hexmap/articles/projections.md):

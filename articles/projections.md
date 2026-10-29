@@ -23,14 +23,14 @@ Earth decides two things about the hexagons:
 - whether they look **regular**, with six equal sides, and
 - whether they cover **equal areas on the ground**.
 
-[`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md) makes
-regular, equally sized hexagons in the plane of a projected coordinate
-reference system (CRS). This is the CRS of the map, or the one given
-with `crs`. A map in longitude and latitude has no plane to make
-hexagons in, so by default it is projected with the Lambert azimuthal
-equal-area projection centred on the map, and a message names the CRS
-chosen. The hexagons are ordinary `sf` polygons, so they keep their
-location on the Earth and can be plotted with
+[`hexmap()`](https://pkg.mitchelloharawild.com/hexmap/reference/hexmap.md)
+makes regular, equally sized hexagons in the plane of a projected
+coordinate reference system (CRS). This is the CRS of the map, or the
+one given with `crs`. A map in longitude and latitude has no plane to
+make hexagons in, so by default it is projected with the Lambert
+azimuthal equal-area projection centred on the map, and a message names
+the CRS chosen. The hexagons are ordinary `sf` polygons, so they keep
+their location on the Earth and can be plotted with
 [`geom_sf()`](https://ggplot2.tidyverse.org/reference/ggsf.html) in any
 projection. They only look regular when plotted in the projection they
 were made in, and only cover equal areas on the ground when that

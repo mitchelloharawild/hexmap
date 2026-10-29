@@ -1,13 +1,13 @@
 # Layouts of hexagons
 
 These functions create a layout for the `layout` argument of
-[`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md),
+[`hexmap()`](https://pkg.mitchelloharawild.com/hexmap/reference/hexmap.md),
 which arranges the hexagons, and the hexagons of each group (e.g.
 state). Groups usually need a very different area of hexagons than they
 cover on the map (e.g. densely populated states have many small
 regions), so the map has to be distorted, and each layout distorts it
 differently. See
-[`vignette("layouts")`](https://numbats.github.io/hexmap/articles/layouts.md)
+[`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.md)
 for how they compare.
 
 ## Usage
@@ -57,9 +57,9 @@ layout_repair(layout, iterations = 30, border = 0)
   For `layout_compact()` and `layout_slice()`, a data frame with columns
   `group`, `x` and `y` giving positions (in the coordinates of the map,
   after any transformation by the `crs` argument of
-  [`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md)) to
-  use in place of the centroids of some groups when arranging them. For
-  example, moving a group's anchor east of its neighbour places its
+  [`hexmap()`](https://pkg.mitchelloharawild.com/hexmap/reference/hexmap.md))
+  to use in place of the centroids of some groups when arranging them.
+  For example, moving a group's anchor east of its neighbour places its
   block on the east side of that neighbour.
 
 - tree:
@@ -106,7 +106,7 @@ layout_repair(layout, iterations = 30, border = 0)
 ## Value
 
 A layout function, for the `layout` argument of
-[`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md).
+[`hexmap()`](https://pkg.mitchelloharawild.com/hexmap/reference/hexmap.md).
 
 ## Details
 

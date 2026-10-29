@@ -10,16 +10,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/numbats/hexmap/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/mitchelloharawild/hexmap/blob/main/DESCRIPTION)
 
 O'Hara-Wild M, Tanaka E (2026). *hexmap: Convert a Map into a Hexagon
 Tile Map*. R package version 0.0.0.9000,
-<https://numbats.github.io/hexmap/>.
+<https://pkg.mitchelloharawild.com/hexmap/>.
 
     @Manual{,
       title = {hexmap: Convert a Map into a Hexagon Tile Map},
       author = {Mitchell O'Hara-Wild and Emi Tanaka},
       year = {2026},
       note = {R package version 0.0.0.9000},
-      url = {https://numbats.github.io/hexmap/},
+      url = {https://pkg.mitchelloharawild.com/hexmap/},
     }

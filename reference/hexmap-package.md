@@ -17,11 +17,11 @@ populated ones.
 
 Useful links:
 
-- <https://numbats.github.io/hexmap/>
+- <https://pkg.mitchelloharawild.com/hexmap/>
 
-- <https://github.com/numbats/hexmap>
+- <https://github.com/mitchelloharawild/hexmap>
 
-- Report bugs at <https://github.com/numbats/hexmap/issues>
+- Report bugs at <https://github.com/mitchelloharawild/hexmap/issues>
 
 ## Author
 

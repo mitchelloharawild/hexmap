@@ -35,14 +35,14 @@ hexmap(
 
   How the hexagons (and groups) are arranged, as a layout function such
   as
-  [`layout_hierarchy()`](https://numbats.github.io/hexmap/reference/layouts.md)
+  [`layout_hierarchy()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
   (the default),
-  [`layout_diffusion()`](https://numbats.github.io/hexmap/reference/layouts.md),
-  [`layout_compact()`](https://numbats.github.io/hexmap/reference/layouts.md)
+  [`layout_diffusion()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md),
+  [`layout_compact()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
   or
-  [`layout_slice()`](https://numbats.github.io/hexmap/reference/layouts.md),
+  [`layout_slice()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md),
   optionally wrapped in
-  [`layout_repair()`](https://numbats.github.io/hexmap/reference/layouts.md)
+  [`layout_repair()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
   to fix which groups touch.
 
 - island_gap:
@@ -96,9 +96,9 @@ touching the groups it borders on the map, and the regions are then
 placed within each group. Without `group`, all regions form a single
 group, so the layout only sets the shape of the hexagons and where
 regions are placed within them. See
-[layouts](https://numbats.github.io/hexmap/reference/layouts.md) for the
-available layouts, and
-[`vignette("layouts")`](https://numbats.github.io/hexmap/articles/layouts.md)
+[layouts](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
+for the available layouts, and
+[`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.md)
 for how they compare. Grouping works best for groups that are spatially
 contiguous, such as states.
 
@@ -109,19 +109,19 @@ longitude/latitude input. The hexagons keep their location when plotted
 in another projection, but are stretched by it, so make the hexagons in
 the CRS you will plot in. Use an equal-area CRS for hexagons that also
 cover equal areas on the ground. See
-[`vignette("projections")`](https://numbats.github.io/hexmap/articles/projections.md)
+[`vignette("projections")`](https://pkg.mitchelloharawild.com/hexmap/articles/projections.md)
 for details.
 
 ## See also
 
-[layouts](https://numbats.github.io/hexmap/reference/layouts.md) for how
-the hexagons are arranged.
+[layouts](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
+for how the hexagons are arranged.
 
 ## Examples
 
 ``` r
 library(sf)
-#> Linking to GEOS 3.14.1, GDAL 3.12.2, PROJ 9.7.1; sf_use_s2() is TRUE
+#> Linking to GEOS 3.12.1, GDAL 3.8.4, PROJ 9.4.0; sf_use_s2() is TRUE
 # The 2025 Australian federal election, in the Australian Albers projection
 election <- st_transform(aus_election_2025, 3577)
 # A hexagon for each electoral division
