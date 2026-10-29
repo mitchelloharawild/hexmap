@@ -8,3 +8,6 @@ docs
 
 /.quarto/
 **/*.quarto_ipynb
+_dev
+.claude
+Rplots.pdf
