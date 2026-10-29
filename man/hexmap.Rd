@@ -7,7 +7,7 @@
 hexmap(
   object,
   group = NULL,
-  group_layout = layout_hierarchy(),
+  layout = layout_hierarchy(),
   island_gap = 0.5,
   group_gap = 0.1,
   crs = NULL
@@ -21,10 +21,10 @@ projected or longitude/latitude coordinate reference system.}
 of \code{object} given unquoted (\code{group = state}) or as a string
 (\code{group = "state"}), or as a vector with one value for each region.}
 
-\item{group_layout}{How groups are arranged, as a layout function such as
-\code{\link[=layout_hierarchy]{layout_hierarchy()}} (the default), \code{\link[=layout_diffusion]{layout_diffusion()}},
-\code{\link[=layout_compact]{layout_compact()}} or \code{\link[=layout_slice]{layout_slice()}}, optionally wrapped in
-\code{\link[=layout_repair]{layout_repair()}} to fix which groups touch. Only used with \code{group}.}
+\item{layout}{How the hexagons (and groups) are arranged, as a layout
+function such as \code{\link[=layout_hierarchy]{layout_hierarchy()}} (the default),
+\code{\link[=layout_diffusion]{layout_diffusion()}}, \code{\link[=layout_compact]{layout_compact()}} or \code{\link[=layout_slice]{layout_slice()}}, optionally
+wrapped in \code{\link[=layout_repair]{layout_repair()}} to fix which groups touch.}
 
 \item{island_gap}{The distance, in hexagon widths, beyond which landmasses
 are tiled as separate islands. Use \code{Inf} to tile all land together.}
@@ -50,8 +50,9 @@ The hexagons are in the coordinate reference system they were made in.
 }
 \description{
 Replaces each region of a map with a hexagon of equal size. The hexagons
-tile the outline of the map, and each region is allocated the hexagon that
-minimises the total squared displacement of all regions.
+tile the outline of the map, and regions are allocated hexagons by
+minimising the total squared displacement of all regions (from where the
+layout moves them), so regions keep their relative positions.
 }
 \details{
 Landmasses that are further apart than \code{island_gap} hexagon widths are
@@ -59,16 +60,19 @@ tiled separately, with one hexagon for each region on that landmass. Their
 hexagons are separated by at least one empty hexagon, so islands such as
 Tasmania remain distinct from the mainland.
 
-When \code{group} is given, the hexagons of each group (e.g. state) are kept
-contiguous and a gap of \code{group_gap} hexagon widths is cut along the borders
-between groups, so that each group is visually distinct. Groups usually
-need a very different area of hexagons than they cover on the map, so the
-map is distorted to fit them, as chosen by \code{group_layout}. By default, the
-groups are laid out first, keeping each group's shape and touching the
-groups it borders on the map, and the regions are then placed within each
-group. See \link{layouts} for the available layouts, and
-\code{vignette("layouts")} for how they compare. Grouping works best for groups
-that are spatially contiguous, such as states.
+The hexagons are arranged by \code{layout}. When \code{group} is given, the hexagons
+of each group (e.g. state) are kept contiguous and a gap of \code{group_gap}
+hexagon widths is cut along the borders between groups, so that each group
+is visually distinct. Groups usually need a very different area of
+hexagons than they cover on the map, so the map is distorted to fit them,
+and each layout distorts it differently. By default, the groups are laid
+out first, keeping each group's shape and touching the groups it borders on
+the map, and the regions are then placed within each group. Without
+\code{group}, all regions form a single group, so the layout only sets the
+shape of the hexagons and where regions are placed within them. See
+\link{layouts} for the available layouts, and \code{vignette("layouts")} for how
+they compare. Grouping works best for groups that are spatially
+contiguous, such as states.
 
 The hexagons are regular and equally sized in the coordinate reference
 system (CRS) they are made in, which is the CRS of \code{object} unless \code{crs} is
@@ -114,7 +118,5 @@ election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
 \dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=hex_grid]{hex_grid()}} and \code{\link[=hex_allocate]{hex_allocate()}}, which make an ungrouped hexagon
-map in two steps: \code{hexmap(x)} is the same as
-\code{hex_allocate(x, hex_grid(x))}.
+\link{layouts} for how the hexagons are arranged.
 }

@@ -14,8 +14,8 @@ Authors@R: c(
            comment = c(ORCID = "0000-0002-1455-259X"))
   )
 Description: Converts a map of regions, as an 'sf' object, into a map of
-    equally sized hexagons with one hexagon for each region. Each region is
-    allocated the hexagon that minimises the total squared displacement of all
+    equally sized hexagons with one hexagon for each region. Regions are
+    allocated hexagons by minimising the total squared displacement of all
     regions, so regions keep their relative positions, while distant islands
     are tiled separately. Groups of regions (such as states) can be kept
     together using one of several layouts, including a diffusion cartogram

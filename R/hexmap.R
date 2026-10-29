@@ -1,24 +1,28 @@
 #' Convert a map into a hexagon tile map
 #'
 #' Replaces each region of a map with a hexagon of equal size. The hexagons
-#' tile the outline of the map, and each region is allocated the hexagon that
-#' minimises the total squared displacement of all regions.
+#' tile the outline of the map, and regions are allocated hexagons by
+#' minimising the total squared displacement of all regions (from where the
+#' layout moves them), so regions keep their relative positions.
 #'
 #' Landmasses that are further apart than `island_gap` hexagon widths are
 #' tiled separately, with one hexagon for each region on that landmass. Their
 #' hexagons are separated by at least one empty hexagon, so islands such as
 #' Tasmania remain distinct from the mainland.
 #'
-#' When `group` is given, the hexagons of each group (e.g. state) are kept
-#' contiguous and a gap of `group_gap` hexagon widths is cut along the borders
-#' between groups, so that each group is visually distinct. Groups usually
-#' need a very different area of hexagons than they cover on the map, so the
-#' map is distorted to fit them, as chosen by `group_layout`. By default, the
-#' groups are laid out first, keeping each group's shape and touching the
-#' groups it borders on the map, and the regions are then placed within each
-#' group. See [layouts] for the available layouts, and
-#' `vignette("layouts")` for how they compare. Grouping works best for groups
-#' that are spatially contiguous, such as states.
+#' The hexagons are arranged by `layout`. When `group` is given, the hexagons
+#' of each group (e.g. state) are kept contiguous and a gap of `group_gap`
+#' hexagon widths is cut along the borders between groups, so that each group
+#' is visually distinct. Groups usually need a very different area of
+#' hexagons than they cover on the map, so the map is distorted to fit them,
+#' and each layout distorts it differently. By default, the groups are laid
+#' out first, keeping each group's shape and touching the groups it borders on
+#' the map, and the regions are then placed within each group. Without
+#' `group`, all regions form a single group, so the layout only sets the
+#' shape of the hexagons and where regions are placed within them. See
+#' [layouts] for the available layouts, and `vignette("layouts")` for how
+#' they compare. Grouping works best for groups that are spatially
+#' contiguous, such as states.
 #'
 #' The hexagons are regular and equally sized in the coordinate reference
 #' system (CRS) they are made in, which is the CRS of `object` unless `crs` is
@@ -33,10 +37,10 @@
 #' @param group Optionally, the group of each region (e.g. states), as a column
 #'   of `object` given unquoted (`group = state`) or as a string
 #'   (`group = "state"`), or as a vector with one value for each region.
-#' @param group_layout How groups are arranged, as a layout function such as
-#'   [layout_hierarchy()] (the default), [layout_diffusion()],
-#'   [layout_compact()] or [layout_slice()], optionally wrapped in
-#'   [layout_repair()] to fix which groups touch. Only used with `group`.
+#' @param layout How the hexagons (and groups) are arranged, as a layout
+#'   function such as [layout_hierarchy()] (the default),
+#'   [layout_diffusion()], [layout_compact()] or [layout_slice()], optionally
+#'   wrapped in [layout_repair()] to fix which groups touch.
 #' @param island_gap The distance, in hexagon widths, beyond which landmasses
 #'   are tiled as separate islands. Use `Inf` to tile all land together.
 #' @param group_gap The width of the gap between groups, as a fraction of the
@@ -57,9 +61,7 @@
 #' within `dplyr::mutate()` to add the hexagons as another geometry column.
 #' The hexagons are in the coordinate reference system they were made in.
 #'
-#' @seealso [hex_grid()] and [hex_allocate()], which make an ungrouped hexagon
-#'   map in two steps: `hexmap(x)` is the same as
-#'   `hex_allocate(x, hex_grid(x))`.
+#' @seealso [layouts] for how the hexagons are arranged.
 #'
 #' @examples
 #' library(sf)
@@ -98,33 +100,22 @@
 #' @importFrom sf st_area st_geometry st_point_on_surface
 #' @export
 hexmap <- function(object, group = NULL,
-                   group_layout = layout_hierarchy(),
+                   layout = layout_hierarchy(),
                    island_gap = 0.5, group_gap = 0.1, crs = NULL) {
   check_object(object)
   group <- eval_group(substitute(group), object, parent.frame())
   check_number(island_gap, 0, Inf)
   check_number(group_gap, 0, 1)
-  check_layout(group_layout)
-  if (is.null(group)) {
-    ignored <- c("group_layout", "group_gap")[c(!missing(group_layout), !missing(group_gap))]
-    if (length(ignored)) {
-      warning(paste0("`", ignored, "`", collapse = " and "),
-              if (length(ignored) == 1) " is" else " are",
-              " ignored without `group`.", call. = FALSE)
-    }
-  }
+  check_layout(layout)
   object <- prepare_crs(object, crs)
   check_not_empty(object)
   geometry <- st_geometry(object)
-
-  if (is.null(group)) {
-    grid <- make_grid(geometry, length(geometry), island_gap)
-    return(set_geometry(object, grid[allocate_regions(geometry, grid, NULL)]))
-  }
+  # Without groups, all regions form one group
+  if (is.null(group)) group <- rep(1L, length(geometry))
 
   cellsize <- hex_cellsize(geometry, length(geometry))
   land <- landmasses(geometry, cellsize, island_gap)
-  tile <- group_layout(geometry, group, land, cellsize)
+  tile <- layout(geometry, group, land, cellsize)
   attr(tile, "point") <- NULL
   attr(tile, "warp") <- NULL
   # Layouts may change the size of the hexagons

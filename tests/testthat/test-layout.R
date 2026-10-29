@@ -4,8 +4,8 @@ test_that("layout functions passed without calling them are detected", {
   expect_error(layout_repair(layout_compact), "Did you mean `layout_compact\\(\\)`")
   expect_error(check_layout(layout_hierarchy), "Did you mean `layout_hierarchy\\(\\)`")
   expect_error(check_layout(hexmap::layout_slice), "Did you mean `layout_slice\\(\\)`")
-  group_layout <- layout_diffusion
-  expect_error(check_layout(group_layout), "`group_layout` must be a layout function")
+  layout <- layout_diffusion
+  expect_error(check_layout(layout), "`layout` must be a layout function")
   expect_error(check_layout(function(x) x), "arguments `geometry`, `group`")
 })
 
@@ -42,21 +42,21 @@ test_that("layout arguments are validated when the layout is created", {
 
 test_that("anchor and tree groups are checked against the map's groups", {
   anchor <- data.frame(group = "Atlantis", x = 0, y = 0)
-  expect_error(hexmap(election, group = state, group_layout = layout_compact(anchor = anchor)),
+  expect_error(hexmap(election, group = state, layout = layout_compact(anchor = anchor)),
                "unknown groups: Atlantis")
-  expect_error(hexmap(election, group = state, group_layout = layout_slice(tree = list("WA", "NT"))),
+  expect_error(hexmap(election, group = state, layout = layout_slice(tree = list("WA", "NT"))),
                "missing groups")
 })
 
 test_that("layouts with renamed arguments run on the bundled data", {
   hex <- hexmap(election, group = state,
-                group_layout = layout_diffusion(cartogram = 0.5, resolution = 64))
+                layout = layout_diffusion(cartogram = 0.5, resolution = 64))
   expect_equal(nrow(hex), nrow(election))
   expect_length(unique(sf::st_geometry(hex)), nrow(election))
 
   nsw <- sf::st_coordinates(sf::st_centroid(sf::st_union(election[election$state == "NSW", ])))
   anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-  hex <- hexmap(election, group = state, group_layout = layout_compact(anchor = anchor),
+  hex <- hexmap(election, group = state, layout = layout_compact(anchor = anchor),
                 group_gap = 0)
   centre <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(hex)))[, 1]
   expect_gt(mean(centre[hex$state == "ACT"]), mean(centre[hex$state == "NSW"]))

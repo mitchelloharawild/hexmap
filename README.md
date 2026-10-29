@@ -4,10 +4,12 @@
 # hexmap <a href="https://numbats.github.io/hexmap/"><img src="man/figures/logo.png" align="right" height="138" alt="hexmap website" /></a>
 
 <!-- badges: start -->
+
 [![R-CMD-check](https://github.com/numbats/hexmap/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/numbats/hexmap/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle:
 experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-[![CRAN status](https://www.r-pkg.org/badges/version/hexmap)](https://CRAN.R-project.org/package=hexmap)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/hexmap)](https://CRAN.R-project.org/package=hexmap)
 <!-- badges: end -->
 
 hexmap converts a map of regions into a map of equally sized hexagons,
@@ -44,9 +46,9 @@ hexmap(electorates, group = state)
   are kept together, separated by a small gap (`group_gap`), and touch
   the same neighbouring groups as on the map.
 
-- **Group layouts.** `group_layout` sets how groups are arranged: groups
-  that keep their own shapes and positions (`layout_hierarchy()`, the
-  default), a cartogram that keeps more of the overall outline
+- **Layouts.** `layout` sets how the hexagons and groups are arranged:
+  groups that keep their own shapes and positions (`layout_hierarchy()`,
+  the default), a cartogram that keeps more of the overall outline
   (`layout_diffusion()`), compact blocks (`layout_compact()`), or a
   spatial treemap (`layout_slice()`). `layout_repair()` fixes the
   borders between groups of any layout. See `vignette("layouts")` for
@@ -70,12 +72,6 @@ hexmap(electorates, group = state)
   electorates |>
     dplyr::mutate(hex = hexmap(geometry, group = state))
   ```
-
-Without groups, `hexmap()` works in two steps that are also available on
-their own: `hex_grid()` tiles a map with hexagons, and `hex_allocate()`
-allocates them to regions, so `hexmap(x)` is the same as
-`hex_allocate(x, hex_grid(x))`. With groups, the hexagons are instead
-made and allocated by the layout.
 
 ## Example: the 2025 Australian federal election
 

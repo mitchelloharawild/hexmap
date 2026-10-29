@@ -1,74 +1,3 @@
-#' Create a hexagon grid that tiles a geometry
-#'
-#' Tiles a geometry with exactly `n_tiles` equally sized hexagons. The hexagon
-#' size is chosen so that `n_tiles` hexagons have the same total area as the
-#' geometry, and the hexagons that overlap the geometry the most are kept.
-#'
-#' Landmasses that are further apart than `island_gap` hexagon widths are
-#' tiled separately. The hexagons of different landmasses are always separated
-#' by at least one empty hexagon, so islands such as Tasmania remain visibly
-#' distinct from the mainland. When `object` has several regions, each
-#' landmass gets a share of the `n_tiles` hexagons in proportion to its number
-#' of regions (so by default, exactly one hexagon for each of its regions, as
-#' in [hexmap()]). A single geometry is shared between its landmasses in
-#' proportion to their area.
-#'
-#' `hex_grid()` and [hex_allocate()] are the two steps of an ungrouped
-#' [hexmap()]: `hexmap(x)` is the same as `hex_allocate(x, hex_grid(x))`.
-#' Grouped hexagon maps are instead made by a [layout][layouts].
-#'
-#' @param object An sf object, or a geometry column (sfc), to tile. It is
-#'   recommended to first simplify the geometry to speed up the tiling.
-#' @param n_tiles The number of hexagons. Defaults to one for each region of
-#'   `object`.
-#' @inheritParams hexmap
-#'
-#' @return
-#' A geometry column (sfc) of `n_tiles` hexagons that tile the input
-#' geometry, in the coordinate reference system they were made in.
-#'
-#' @examples
-#' library(sf)
-#' election <- st_transform(aus_election_2025, 3577)
-#' # A hexagon for each electoral division
-#' grid <- hex_grid(election)
-#' # The outline of Australia with 75 hexagons
-#' australia <- st_union(election)
-#' grid <- hex_grid(australia, n_tiles = 75)
-#'
-#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
-#' library(ggplot2)
-#' ggplot() +
-#'   geom_sf(data = australia) +
-#'   geom_sf(data = grid, fill = "steelblue", alpha = 0.2)
-#'
-#' @importFrom sf st_geometry
-#' @export
-hex_grid <- function(object, n_tiles = NROW(object), island_gap = 0.5,
-                     crs = NULL) {
-  check_object(object)
-  check_number(n_tiles, 1, Inf)
-  check_number(island_gap, 0, Inf)
-  object <- prepare_crs(object, crs)
-  check_not_empty(object)
-  make_grid(st_geometry(object), round(n_tiles), island_gap)
-}
-
-# Tiles the land with n_tiles hexagons, shared between landmasses in
-# proportion to their number of regions, or for a single region their area
-#' @importFrom sf st_area
-make_grid <- function(geometry, n_tiles, island_gap) {
-  cellsize <- hex_cellsize(geometry, n_tiles)
-  land <- landmasses(geometry, cellsize, island_gap)
-  share <- if (length(geometry) > 1) {
-    tabulate(land$region, nbins = length(land$geometry))
-  } else {
-    as.numeric(st_area(land$geometry))
-  }
-  n <- if (sum(share) == n_tiles) share else round_preserving_sum(n_tiles * share / sum(share))
-  landmass_grid(land$geometry, n, cellsize)$tile
-}
-
 # Spacing between hexagon centres such that n_tiles hexagons cover the land
 #' @importFrom sf st_area st_union
 hex_cellsize <- function(geometry, n_tiles) {
@@ -194,15 +123,6 @@ connected_components <- function(adjacent, nodes = seq_along(adjacent)) {
   id[nodes]
 }
 
-# Rounds non-negative numbers to integers while preserving their total
-round_preserving_sum <- function(x) {
-  n <- floor(x)
-  extra <- round(sum(x)) - sum(n)
-  top <- order(x - n, decreasing = TRUE)[seq_len(extra)]
-  n[top] <- n[top] + 1
-  n
-}
-
 check_object <- function(object) {
   if (!inherits(object, c("sf", "sfc"))) {
     stop("`object` must be an sf object or a geometry column (sfc).", call. = FALSE)
@@ -221,10 +141,10 @@ check_has_crs <- function(object, arg = "object") {
 }
 
 #' @importFrom sf st_crs st_is_longlat
-check_projected <- function(object, arg = "object") {
+check_projected <- function(object) {
   if (isTRUE(st_is_longlat(object)) || is.na(st_crs(object))) {
     stop(
-      "`", arg, "` must use a projected coordinate reference system. ",
+      "`object` must use a projected coordinate reference system. ",
       "Use `sf::st_transform()` first, e.g. EPSG:3577 for Australia.",
       call. = FALSE
     )
