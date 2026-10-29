@@ -64,7 +64,7 @@ centre_of <- function(x) {
 
 layouts <- list(layout_repair(layout_diffusion()), layout_diffusion(alpha = 0),
                 layout_diffusion(alpha = 1), layout_compact(),
-                layout_repair(layout_compact()), layout_slice())
+                layout_repair(layout_compact()), layout_slice(), layout_hierarchy())
 
 # The pairs of states whose tiles touch
 touching <- function(hex) {
@@ -92,6 +92,20 @@ test_that("layout_repair() fixes the borders of other layouts", {
   # Repair keeps the hexagons of the layout
   compact <- hexmap(ced, group = state, group_layout = layout_compact(), group_gap = 0)
   expect_setequal(sf::st_geometry(hex), sf::st_geometry(compact))
+})
+
+test_that("the hierarchy layout keeps borders, and the ACT inside NSW", {
+  hex <- hexmap(ced, group = state, group_layout = layout_hierarchy(), group_gap = 0)
+  expect_equal(touching(hex), borders)
+  # Every hexagon of the ACT is surrounded by hexagons
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  centre <- sf::st_centroid(sf::st_geometry(hex))
+  near <- sf::st_is_within_distance(centre, dist = 1.2 * size)
+  expect_true(all(lengths(near[hex$state == "ACT"]) == 7))
+  # SA is west of VIC, and QLD north of NSW
+  xy <- centre_of(hex)
+  expect_lt(xy["SA", "X"], xy["VIC", "X"])
+  expect_gt(xy["QLD", "Y"], xy["NSW", "Y"])
 })
 
 # Share of regions that touch another state on the map whose hexagon touches
@@ -254,6 +268,7 @@ test_that("inputs are validated", {
   expect_error(slice(list("WA", "NT")), "missing groups")
   expect_error(slice(list(unique(ced$state), "WA")), "more than once: WA")
   expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
+  expect_error(layout_hierarchy(blend = 2), "between 0 and 1")
   expect_error(layout_repair(layout_compact(), border = -1), "`border`")
   expect_error(layout_diffusion(proximity = -1), "`proximity`")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")

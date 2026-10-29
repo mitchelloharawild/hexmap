@@ -26,6 +26,17 @@
 #'   hexagons of its groups. Each cut is chosen so that neighbouring groups
 #'   keep their relative position (e.g. one above the other for a horizontal
 #'   cut) and pieces don't become thin.
+#' * `layout_hierarchy()` lays out the groups first, then the regions within
+#'   each group. The groups are warped by a diffusion cartogram, blended
+#'   towards a scaled copy of each group's own shape, so that groups keep their
+#'   shapes while still touching their neighbours, at the expense of the
+#'   outline of the whole map. The hexagons are split between groups nearest
+#'   to these shapes, keeping groups with little coast (such as the ACT) off
+#'   the edge of the hexagons, and the borders between groups are adjusted (by
+#'   simulated annealing) so that groups touch as they do on the map. Regions
+#'   are then placed within each group by matching the spread of the group on
+#'   the map to the spread of its hexagons, so each group's regions keep their
+#'   positions within it.
 #'
 #' `layout_repair()` wraps any layout to then adjust the borders between
 #' groups, so that groups touch where they share a border on the map, and
@@ -60,8 +71,12 @@
 #'   squared distance to the group's nearest region, so that a group gives up
 #'   the hexagons far from its regions (e.g. outback rather than near its
 #'   cities). With 0, only the shapes are used.
+#' @param blend How far to blend the cartogram towards a scaled copy of each
+#'   group's shape, from 0 (the cartogram) to 1 (each group's own shape).
+#'   Values above about 0.5 can fold the map.
 #' @param layout A layout function to repair, such as `layout_compact()`.
-#' @param iterations The number of swaps to try, per hexagon.
+#' @param iterations The number of swaps to try, per hexagon, when adjusting
+#'   the borders between groups.
 #' @param border How much to keep each region's distance to borders (the coast
 #'   and each other group) when placing it, relative to keeping its position.
 #'   Distances are measured from each region's polygon, in hexagon widths, and
@@ -110,6 +125,8 @@
 #' anchor <- data.frame(group = "Australian Capital Territory",
 #'                      x = nsw[1] + 5e5, y = nsw[2])
 #' ced_hex <- hexmap(ced, group = state, group_layout = layout_compact(anchor = anchor))
+#' # Each state keeps its shape, at the expense of the outline of Australia
+#' ced_hex <- hexmap(ced, group = state, group_layout = layout_hierarchy())
 #' # Compact blocks that touch as the states do
 #' ced_hex <- hexmap(ced, group = state, group_layout = layout_repair(layout_compact()))
 #' @name layouts
@@ -144,6 +161,19 @@ layout_slice <- function(tree = NULL, anchor = NULL) {
     layout <- slice_tiles(geometry, group, land$region, cellsize,
                           check_anchor(anchor, group), check_tree(tree, group))
     layout$tile[layout$index]
+  }
+}
+
+#' @rdname layouts
+#' @export
+layout_hierarchy <- function(blend = 0.4, resolution = 256, iterations = 30) {
+  check_number(blend, 0, 1)
+  check_number(resolution, 16, Inf)
+  check_number(iterations, 0, Inf)
+  resolution <- 2 * round(resolution / 2)
+  function(geometry, group, land, cellsize) {
+    hierarchy_tiles(geometry, group, land, cellsize, blend, resolution,
+                    iterations = round(iterations * length(geometry)))
   }
 }
 

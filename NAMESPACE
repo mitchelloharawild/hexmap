@@ -4,10 +4,12 @@ export(hex_grid)
 export(hexmap)
 export(layout_compact)
 export(layout_diffusion)
+export(layout_hierarchy)
 export(layout_repair)
 export(layout_slice)
 export(tile_allocate)
 importFrom(sf,
+  "st_crs<-",
   "st_geometry<-",
   sf_use_s2,
   st_area,
