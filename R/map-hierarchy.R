@@ -1,6 +1,6 @@
 # Lays out the groups first, then the regions within each group. The groups
 # are warped by a diffusion cartogram (to areas in proportion to their numbers
-# of regions), and the warp is blended by blend towards a scaled copy of each
+# of regions), and the warp is blended by shape towards a scaled copy of each
 # group's own shape, so groups keep their shapes better than the warp alone
 # allows. A hexagon lattice is grown over the warped landmasses, and split
 # between the pieces of each group (on each landmass) with exactly their
@@ -18,14 +18,14 @@
 #' @importFrom sf st_area st_as_sfc st_bbox st_boundary st_buffer st_centroid
 #' @importFrom sf st_coordinates st_crs st_crs<- st_intersection st_is_within_distance
 #' @importFrom sf st_length st_make_grid st_make_valid st_point_on_surface st_union
-hierarchy_tiles <- function(geometry, group, land, cellsize, blend = 0.4,
+hierarchy_tiles <- function(geometry, group, land, cellsize, shape = 0.4,
                             resolution = 256, iterations = 30 * length(geometry),
-                            weight = c(shape = 0.6, coast = 8)) {
+                            weight = c(copy = 0.6, coast = 8)) {
   n_region <- length(geometry)
   id <- as.integer(factor(group, exclude = NULL))
-  shape <- do.call(c, lapply(split(geometry, id), st_union))
-  shape <- simplify_polygons(shape, cellsize / 10)
-  warp <- warp_groups(shape, tabulate(id), resolution, blend, 1.5 * cellsize)
+  group_shape <- do.call(c, lapply(split(geometry, id), st_union))
+  group_shape <- simplify_polygons(group_shape, cellsize / 10)
+  warp <- warp_groups(group_shape, tabulate(id), resolution, shape, 1.5 * cellsize)
 
   # The pieces of each group on each landmass, warped and as scaled copies
   piece <- as.integer(interaction(id, land$region, drop = TRUE))
@@ -88,8 +88,8 @@ hierarchy_tiles <- function(geometry, group, land, cellsize, blend = 0.4,
   # Split each landmass's hexagons between its pieces, moving the scaled
   # copies halfway to the centroid of their hexagons each round
   for (round in 0:4) {
-    distance <- (1 - weight[["shape"]]) * to_warped +
-      weight[["shape"]] * signed_distance(centre, scaled) / cellsize
+    distance <- (1 - weight[["copy"]]) * to_warped +
+      weight[["copy"]] * signed_distance(centre, scaled) / cellsize
     cost <- distance + pmax(distance, 0)^2 + extra
     label <- integer(length(tile))
     for (b in unique(land$region)) {

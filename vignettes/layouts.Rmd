@@ -93,7 +93,7 @@ outline_map(hierarchy, "layout_hierarchy()") +
   plot_layout(guides = "collect")
 ```
 
-To keep even more of the outline, `layout_diffusion(alpha = 0)` squeezes the groups into the outline of the map as it is, at the cost of bending their shapes further.
+To keep even more of the outline, `layout_diffusion(cartogram = 0)` squeezes the groups into the outline of the map as it is, at the cost of bending their shapes further.
 
 ## Position of each group
 

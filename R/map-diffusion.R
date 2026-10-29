@@ -1,7 +1,7 @@
 # Tiles a map warped by a diffusion cartogram, so that each group keeps its
 # shape and the borders between groups. The (simplified) shape of each group
-# is warped so that its area is area^(1 - alpha) * size^alpha, where size is
-# the area in proportion to its number of regions, so that alpha moves from
+# is warped so that its area is area^(1 - cartogram) * size^cartogram, where size is
+# the area in proportion to its number of regions, so that cartogram moves from
 # the real map (0) to a cartogram (1). The hexagons tile the warped
 # landmasses, and are split between groups along the warped borders.
 #
@@ -10,21 +10,21 @@
 # geometries as the attribute "warp" (both used by repair_groups()).
 #' @importFrom sf st_area st_coordinates st_make_valid st_point_on_surface
 #' @importFrom sf st_union
-diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
+diffusion_tiles <- function(geometry, group, land, cellsize, cartogram = 0.75,
                             resolution = 256, proximity = 0.1, passes = 3) {
   id <- as.integer(factor(group, exclude = NULL))
   shape <- do.call(c, lapply(split(geometry, id), st_union))
   shape <- simplify_polygons(shape, cellsize / 10)
   area <- as.numeric(st_area(shape))
   size <- tabulate(id) / length(id) * sum(area)
-  target <- area^(1 - alpha) * size^alpha
+  target <- area^(1 - cartogram) * size^cartogram
   target <- target / sum(target)
 
   # Repeat the warp until each group's area is within half a hexagon of its
   # target
   maps <- list()
   warped <- shape
-  for (pass in seq_len(if (alpha > 0) passes else 0)) {
+  for (pass in seq_len(if (cartogram > 0) passes else 0)) {
     area <- as.numeric(st_area(warped))
     if (max(abs(area / sum(area) - target)) * length(id) < 0.5) break
     f <- diffusion_map(warped, target * sum(area), resolution)
