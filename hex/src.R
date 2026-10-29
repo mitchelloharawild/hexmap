@@ -51,7 +51,7 @@ hexagon <- function(r = R) {
 # ---- The map: hexmap of the 2025 federal electorates ------------------------
 
 elec <- st_transform(aus_election2025, 3577)
-hx_map <- hexmap(elec, group = state)
+hx_map <- hexmap(elec, group = state, group_layout = layout_hierarchy())
 
 # Mitred buffers keep the coastline hexagonal
 coastline <- function(d) {
@@ -136,7 +136,10 @@ r_in <- sqrt(3) / 2 * r_hex / s
 ring <- round((as.numeric(st_distance(hex_pt, st_boundary(coastline(r_in / 2)))) / r_in + 1) / 2)
 
 # Rows of the hexmap, and each hexagon's place in its row counted from the east coast
-row <- round(centre[, 2] / (1.5 * r_hex))
+# (rows split where hexagon centres jump a row apart, as centres drift off an exact grid)
+y_order <- order(centre[, 2])
+row <- integer(nrow(centre))
+row[y_order] <- cumsum(c(1, diff(centre[y_order, 2]) > .75 * r_hex))
 from_east <- ave(-centre[, 1], row, FUN = rank)
 vic <- hx_map$state == "VIC"
 tas <- hx_map$state == "TAS"
@@ -145,8 +148,8 @@ step <- sqrt(3) * r_hex
 
 terrain <- rep("none", nrow(hx_map))
 terrain[lonlat[, 1] < 141 & lonlat[, 2] > -33 & ring >= 2] <- "desert"
-# Karri country, Cape York and Tasmania
-terrain[(lonlat[, 1] < 120 & lonlat[, 2] < -30) | (lonlat[, 1] > 141 & lonlat[, 2] > -17) | tas] <- "forest"
+# Karri country (in Forrest, wherever that lands), Cape York and Tasmania
+terrain[hx_map$division == "Forrest" | (lonlat[, 1] > 141 & lonlat[, 2] > -17) | tas] <- "forest"
 # Victorian forests: the high country behind the Gippsland coast, and the south-west
 terrain[vic & row >= row[indi] & ring >= 2 & centre[, 1] > centre[indi, 1] - 1.1 * step] <- "forest"
 terrain[vic & row >= row[indi] - 1 & centre[, 1] < min(centre[vic, 1]) + 2.6 * step] <- "forest"
