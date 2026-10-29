@@ -1,0 +1,169 @@
+---
+title: "Choosing a layout for groups"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Choosing a layout for groups}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 3.5,
+  out.width = "100%"
+)
+```
+
+```{r setup, message = FALSE}
+library(hexmap)
+library(sf)
+library(ggplot2)
+```
+
+When regions are grouped, such as electoral divisions into states, `hexmap()` keeps the hexagons of each group together. Groups rarely need the same space in hexagons as they cover on the map: New South Wales has 46 of the 150 divisions at the 2025 Australian federal election, but only a tenth of the land, while Western Australia has a third of the land but only 16 divisions. The map has to be distorted to fit, and `group_layout` chooses how.
+
+Each layout keeps some things and gives up others:
+
+* the **outline** of the whole map, such as the coastline of Australia;
+* the **shape of each group**, such as the triangle of Tasmania or the long coast of Queensland;
+* the **position of each group**, so that each group is in the right direction from the others and touches the same groups as on the map;
+* the **position of regions within each group**, so that a state's northern divisions are at the top of its hexagons, and its city divisions stay together.
+
+The examples use the 2025 election results included in hexmap, in the Australian Albers equal-area projection:
+
+```{r data}
+election <- st_transform(aus_election2025, 3577)
+```
+
+```{r helpers, include = FALSE}
+library(patchwork)
+state_map <- function(map, title) {
+  ggplot(map) +
+    geom_sf(aes(fill = state), colour = "white", linewidth = 0.1) +
+    scale_fill_manual(values = unname(palette.colors(8, "Set 2")), name = NULL) +
+    labs(title = title) +
+    theme_void() +
+    theme(plot.title = element_text(size = 10))
+}
+```
+
+## The layouts
+
+```{r layouts}
+hierarchy <- hexmap(election, group = state)
+diffusion <- hexmap(election, group = state, group_layout = layout_diffusion())
+compact <- hexmap(election, group = state, group_layout = layout_compact())
+slice <- hexmap(election, group = state, group_layout = layout_slice())
+```
+
+```{r layout-maps, echo = FALSE, fig.height = 7}
+state_map(hierarchy, "layout_hierarchy() (the default)") +
+  state_map(diffusion, "layout_diffusion()") +
+  state_map(compact, "layout_compact()") +
+  state_map(slice, "layout_slice()") +
+  plot_layout(nrow = 2, guides = "collect")
+```
+
+* **`layout_hierarchy()`**, the default, places the groups first and then the regions within each group. Each group keeps its own shape, in the right direction from its neighbours, at the expense of the outline of the whole map. It is the slowest layout.
+* **`layout_diffusion()`** stretches and squeezes the whole map, like a rubber sheet, until each group has the space it needs. It keeps more of the outline of the map than `layout_hierarchy()`, but bends the shapes of groups more, and places regions within groups less accurately. It is usually faster than `layout_hierarchy()`, by up to twice.
+* **`layout_compact()`** draws each group as a round block of hexagons, packed together like a hand drawn election map. Blocks are easy to compare, but the shape of each group and the outline of the map are lost, and neighbouring blocks don't always touch where the groups do. It is the fastest layout.
+* **`layout_slice()`** cuts a rectangle into a piece for each group, so groups are separated by straight lines. Every landmass becomes a rectangle, losing features such as Cape York and the Great Australian Bight, and groups lose their shapes as much as in the compact layout. It is nearly as fast as `layout_compact()`.
+
+## Outline and shape
+
+`layout_diffusion()` keeps the outline of the map, while `layout_hierarchy()` keeps the shape of each group. Outlining Australia, scaled to the area of the hexagons, shows the difference: the diffusion layout fills more of the coastline, while the hierarchy layout lets the outline go so that each state looks like itself. Queensland, for instance, keeps Cape York as its northern tip in the hierarchy layout, but is stretched into a band along the top of the map in the diffusion layout.
+
+```{r outline, echo = FALSE}
+outline <- function(hex) {
+  australia <- st_union(st_geometry(election))
+  scale <- sqrt(sum(st_area(hex)) / st_area(australia))
+  centre <- st_centroid(australia)
+  scaled <- (australia - centre) * as.numeric(scale) + st_centroid(st_union(st_geometry(hex)))
+  st_set_crs(scaled, st_crs(hex))
+}
+outline_map <- function(hex, title) {
+  state_map(hex, title) +
+    geom_sf(data = outline(hex), fill = NA, colour = "black", linewidth = 0.3)
+}
+outline_map(hierarchy, "layout_hierarchy()") +
+  outline_map(diffusion, "layout_diffusion()") +
+  plot_layout(guides = "collect")
+```
+
+To keep even more of the outline, `layout_diffusion(alpha = 0)` squeezes the groups into the outline of the map as it is, at the cost of bending their shapes further.
+
+## Position of each group
+
+Both `layout_hierarchy()` and `layout_diffusion()` keep each group in the right direction from the others, with `layout_hierarchy()` slightly more accurate on most maps. The compact layout is the least accurate, as round blocks have to be pushed apart to fit together. They differ in which groups touch. On this map, `layout_hierarchy()` makes every state touch exactly the states it borders. The diffusion layout lets the ACT touch Victoria, and the compact layout gets five pairs of states wrong: the ACT touches South Australia and Victoria, Western Australia touches Queensland and Victoria, and New South Wales and Victoria don't touch.
+
+`layout_repair()` takes any layout and swaps hexagons across the borders between groups until groups touch as they do on the map. It fixes the ACT in the diffusion layout, and three of the five mistakes in the compact layout:
+
+```{r repair}
+repaired <- hexmap(election, group = state,
+                   group_layout = layout_repair(layout_compact()))
+```
+
+```{r repair-map, echo = FALSE}
+state_map(compact, "layout_compact()") +
+  state_map(repaired, "layout_repair(layout_compact())") +
+  plot_layout(guides = "collect")
+```
+
+Repairing only swaps hexagons along the borders between groups, keeping the hexagons of the layout, so it can't move whole blocks: Western Australia still reaches across to touch Queensland and Victoria. `layout_hierarchy()` makes the same swaps as it places the groups, so it doesn't need repairing.
+
+## Position of regions within groups
+
+`layout_hierarchy()` places the regions of each group by fitting the group's shape on the map to the shape of its hexagons, so on most maps, regions keep their order within each group better than with the other layouts. Colouring each division by how far east it is within its state shows the order. Both layouts keep Perth in the west of Western Australia and Brisbane in the east of Queensland, but the hierarchy layout keeps more of the outback in Queensland's west.
+
+```{r order, echo = FALSE}
+easting <- st_coordinates(st_point_on_surface(st_geometry(election)))[, 1]
+east <- ave(easting, election$state, FUN = function(x) (x - min(x)) / max(diff(range(x)), 1))
+order_map <- function(hex, title) {
+  ggplot(hex) +
+    geom_sf(aes(fill = east), colour = "white", linewidth = 0.1) +
+    scale_fill_viridis_c(name = "Within state", breaks = c(0, 1),
+                         labels = c("West", "East")) +
+    labs(title = title) +
+    theme_void() +
+    theme(plot.title = element_text(size = 10))
+}
+order_map(hierarchy, "layout_hierarchy()") +
+  order_map(diffusion, "layout_diffusion()") +
+  plot_layout(guides = "collect")
+```
+
+To measure the order, compare the rank of each division from west to east (and from south to north) on the map with its rank in the hexagons of its state. A rank correlation of 1 means that every division is in the same order:
+
+```{r order-kept}
+order_kept <- function(hex) {
+  map <- st_coordinates(st_point_on_surface(st_geometry(election)))
+  tile <- st_coordinates(st_centroid(st_geometry(hex)))
+  states <- split(seq_len(nrow(map)), election$state)
+  states <- states[lengths(states) >= 4]
+  mean(sapply(states, function(i) {
+    cor(map[i, ], tile[i, ], method = "spearman")[c(1, 4)]
+  }))
+}
+sapply(list(hierarchy = hierarchy, diffusion = diffusion,
+            compact = compact, slice = slice), order_kept)
+```
+
+Across the whole map, the hierarchy and diffusion layouts move regions by about the same distance from where they are on the map. The hierarchy layout keeps regions in order within groups, while the diffusion layout keeps more of the outline.
+
+## Which to choose
+
+| | Outline of the map | Shape of each group | Position of each group | Regions within groups | Speed |
+|---|---|---|---|---|---|
+| `layout_hierarchy()` | Fair | Best | Best | Best | Slowest |
+| `layout_diffusion()` | Best | Good | Good | Good | Medium |
+| `layout_compact()` | Poor | Poor | Fair | Good | Fastest |
+| `layout_slice()` | Rectangle | Poor | Good | Fair | Fast |
+
+The table summarises how the layouts compare across five maps: Australian electoral divisions and local government areas, US states and counties, and the countries of the world. The ratings are relative to each other, and one map can differ from the overall pattern. On the world map, for instance, with a few large groups, `layout_diffusion()` keeps the shapes of the continents better than `layout_hierarchy()`.
+
+* Use `layout_hierarchy()`, the default, when the groups should be recognisable and in the right places, such as states on an election map.
+* Use `layout_diffusion()` when the outline of the whole map matters more than the shape of each group, or for a faster layout.
+* Use `layout_compact()` or `layout_slice()` for a stylised map, where the groups are easy to compare but don't need to look like themselves. Wrap them in `layout_repair()` so that groups touch as they do on the map.
