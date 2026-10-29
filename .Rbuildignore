@@ -9,3 +9,5 @@
 ^\.github$
 ^_dev$
 ^hex$
+^\.claude$
+^Rplots\.pdf$
