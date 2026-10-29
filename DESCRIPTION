@@ -1,31 +1,43 @@
 Package: hexmap
-Title: Convert a map into a hex map
+Title: Convert a Map into a Hexagon Tile Map
 Version: 0.0.0.9000
-Authors@R: 
+Authors@R: c(
     person(given = "Emi",
            family = "Tanaka",
            role = c("aut", "cre"),
            email = "dr.emi.tanaka@gmail.com",
-           comment = c(ORCID = "0000-0002-1455-259X"))
-Description: This package takes an sf map object and converts into a hex tile map. 
- This aids data visualisation of maps by making small geographical regions to be 
- equally visible as large geographical regions. 
+           comment = c(ORCID = "0000-0002-1455-259X")),
+    person(given = "Mitchell",
+           family = "O'Hara-Wild",
+           role = "aut",
+           email = "mail@mitchelloharawild.com")
+  )
+Description: Converts a map of regions, as an 'sf' object, into a map of
+    equally sized hexagons with one hexagon for each region. Each region is
+    allocated the hexagon that minimises the total squared displacement of all
+    regions, so regions keep their relative positions, while distant islands
+    are tiled separately. Groups of regions (such as states) can be kept
+    together using one of several layouts, including a diffusion cartogram
+    (Gastner and Newman, 2004) <doi:10.1073/pnas.0400280101> and spatially
+    ordered treemaps (Wood and Dykes, 2008) <doi:10.1109/TVCG.2008.165>. This
+    makes small but important regions as visible as large, sparsely populated
+    ones.
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports:
     clue,
-    sf
-URL: https://github.com/emitanaka/hexmap,
-    https://numbats.github.io/hexmap/
-BugReports: https://github.com/emitanaka/hexmap/issues
+    sf,
+    stats
+URL: https://numbats.github.io/hexmap/, https://github.com/numbats/hexmap
+BugReports: https://github.com/numbats/hexmap/issues
 Depends:
     R (>= 4.1)
 LazyData: true
 Suggests:
-    ozmaps,
     ggplot2,
     knitr,
+    ozmaps,
     patchwork,
     rmarkdown,
     testthat (>= 3.0.0)

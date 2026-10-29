@@ -20,4 +20,4 @@
 #' \url{https://results.aec.gov.au/} and boundaries from the Australian Bureau
 #' of Statistics \url{https://www.abs.gov.au/} (ASGS Edition 3), licensed under
 #' CC BY 4.0.
-"aus_election2025"
+"aus_election_2025"

@@ -35,7 +35,7 @@ Each layout keeps some things and gives up others:
 The examples use the 2025 election results included in hexmap, in the Australian Albers equal-area projection:
 
 ```{r data}
-election <- st_transform(aus_election2025, 3577)
+election <- st_transform(aus_election_2025, 3577)
 ```
 
 ```{r helpers, include = FALSE}

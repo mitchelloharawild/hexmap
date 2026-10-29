@@ -61,7 +61,7 @@ library(hexmap)
 party <- c(ALP = "Labor", LP = "Coalition", LNP = "Coalition", NP = "Coalition",
            GRN = "Greens")
 colours <- c(Labor = "#D7263D", Coalition = "#1F4E9C", Greens = "#2E9E44", Other = "#8C8C8C")
-election <- st_transform(aus_election2025, 3577)
+election <- st_transform(aus_election_2025, 3577)
 election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
 election_hexmap <- hexmap(election, group = state)
 
@@ -107,7 +107,7 @@ for (t in c(t, rev(t))) {
 }
 ```
 
-hexmap includes the results as `aus_election2025`: the simplified boundaries of each division from the [Australian Bureau of Statistics](https://www.abs.gov.au/), with its state and the party that won it from the [Australian Electoral Commission](https://www.aec.gov.au/), licensed under CC BY 4.0. The maps below are made in the Australian Albers equal-area projection, with the minor parties combined:
+hexmap includes the results as `aus_election_2025`: the simplified boundaries of each division from the [Australian Bureau of Statistics](https://www.abs.gov.au/), with its state and the party that won it from the [Australian Electoral Commission](https://www.aec.gov.au/), licensed under CC BY 4.0. The maps below are made in the Australian Albers equal-area projection, with the minor parties combined:
 
 ```{r election-data, message = FALSE}
 library(sf)
@@ -115,7 +115,7 @@ library(hexmap)
 
 party <- c(ALP = "Labor", LP = "Coalition", LNP = "Coalition", NP = "Coalition",
            GRN = "Greens")
-election <- st_transform(aus_election2025, 3577)
+election <- st_transform(aus_election_2025, 3577)
 election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
 ```
 

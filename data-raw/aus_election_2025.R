@@ -1,4 +1,4 @@
-## Code to prepare the `aus_election2025` dataset
+## Code to prepare the `aus_election_2025` dataset
 library(sf)
 library(dplyr)
 library(rmapshaper)
@@ -32,11 +32,11 @@ winners <- read.csv(
 ) |>
   select(division = DivisionNm, state = StateAb, party = PartyAb)
 
-aus_election2025 <- divisions |>
+aus_election_2025 <- divisions |>
   inner_join(winners, by = "division") |>
   select(division, state, party) |>
   arrange(division)
 
-stopifnot(nrow(aus_election2025) == 150)
+stopifnot(nrow(aus_election_2025) == 150)
 
-usethis::use_data(aus_election2025, overwrite = TRUE)
+usethis::use_data(aus_election_2025, overwrite = TRUE)

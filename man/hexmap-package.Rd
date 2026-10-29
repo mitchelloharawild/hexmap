@@ -3,18 +3,18 @@
 \docType{package}
 \name{hexmap-package}
 \alias{hexmap-package}
-\title{hexmap: Convert a map into a hex map}
+\title{hexmap: Convert a Map into a Hexagon Tile Map}
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-This package takes an sf map object and converts into a hex tile map. This aids data visualisation of maps by making small geographical regions to be equally visible as large geographical regions.
+Converts a map of regions, as an 'sf' object, into a map of equally sized hexagons with one hexagon for each region. Each region is allocated the hexagon that minimises the total squared displacement of all regions, so regions keep their relative positions, while distant islands are tiled separately. Groups of regions (such as states) can be kept together using one of several layouts, including a diffusion cartogram (Gastner and Newman, 2004) \doi{10.1073/pnas.0400280101} and spatially ordered treemaps (Wood and Dykes, 2008) \doi{10.1109/TVCG.2008.165}. This makes small but important regions as visible as large, sparsely populated ones.
 }
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/emitanaka/hexmap}
   \item \url{https://numbats.github.io/hexmap/}
-  \item Report bugs at \url{https://github.com/emitanaka/hexmap/issues}
+  \item \url{https://github.com/numbats/hexmap}
+  \item Report bugs at \url{https://github.com/numbats/hexmap/issues}
 }
 
 }
@@ -24,6 +24,7 @@ Useful links:
 Authors:
 \itemize{
   \item Emi Tanaka \email{dr.emi.tanaka@gmail.com} (\href{https://orcid.org/0000-0002-1455-259X}{ORCID})
+  \item Mitchell O'Hara-Wild \email{mail@mitchelloharawild.com}
 }
 
 }
