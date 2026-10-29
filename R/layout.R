@@ -43,9 +43,8 @@
 #' groups, so that groups touch where they share a border on the map, and
 #' don't touch where they don't. Pairs of hexagons are swapped across group
 #' borders (by simulated annealing), which keeps the hexagons of the layout,
-#' and keeps each group's hexagons contiguous and compact. The default layout
-#' is `layout_repair(layout_diffusion())`. Repairing a slice layout bends its
-#' straight borders. With `border`, the regions are then placed on their
+#' and keeps each group's hexagons contiguous and compact. Repairing a slice
+#' layout bends its straight borders. With `border`, the regions are then placed on their
 #' group's hexagons keeping their distances to borders as well as their
 #' positions: regions near the coast or another group stay near it, and
 #' regions away from borders stay away from them.
