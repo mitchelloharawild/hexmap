@@ -2,15 +2,16 @@ Package: hexmap
 Title: Convert a Map into a Hexagon Tile Map
 Version: 0.0.0.9000
 Authors@R: c(
-    person(given = "Emi",
-           family = "Tanaka",
-           role = c("aut", "cre"),
-           email = "dr.emi.tanaka@gmail.com",
-           comment = c(ORCID = "0000-0002-1455-259X")),
     person(given = "Mitchell",
            family = "O'Hara-Wild",
+           role = c("aut", "cre"),
+           email = "mail@mitchelloharawild.com",
+           comment = c(ORCID = "0000-0001-6729-7695")),
+    person(given = "Emi",
+           family = "Tanaka",
            role = "aut",
-           email = "mail@mitchelloharawild.com")
+           email = "dr.emi.tanaka@gmail.com",
+           comment = c(ORCID = "0000-0002-1455-259X"))
   )
 Description: Converts a map of regions, as an 'sf' object, into a map of
     equally sized hexagons with one hexagon for each region. Each region is
