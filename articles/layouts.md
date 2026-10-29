@@ -13,8 +13,7 @@ the hexagons of each group together. Groups rarely need the same space
 in hexagons as they cover on the map: New South Wales has 46 of the 150
 divisions at the 2025 Australian federal election, but only a tenth of
 the land, while Western Australia has a third of the land but only 16
-divisions. The map has to be distorted to fit, and `group_layout`
-chooses how.
+divisions. The map has to be distorted to fit, and `layout` chooses how.
 
 Each layout keeps some things and gives up others:
 
@@ -40,9 +39,9 @@ election <- st_transform(aus_election_2025, 3577)
 ``` r
 
 hierarchy <- hexmap(election, group = state)
-diffusion <- hexmap(election, group = state, group_layout = layout_diffusion())
-compact <- hexmap(election, group = state, group_layout = layout_compact())
-slice <- hexmap(election, group = state, group_layout = layout_slice())
+diffusion <- hexmap(election, group = state, layout = layout_diffusion())
+compact <- hexmap(election, group = state, layout = layout_compact())
+slice <- hexmap(election, group = state, layout = layout_slice())
 ```
 
 ![](layouts_files/figure-html/layout-maps-1.png)
@@ -118,7 +117,7 @@ diffusion layout, and three of the five mistakes in the compact layout:
 ``` r
 
 repaired <- hexmap(election, group = state,
-                   group_layout = layout_repair(layout_compact()))
+                   layout = layout_repair(layout_compact()))
 ```
 
 ![](layouts_files/figure-html/repair-map-1.png)

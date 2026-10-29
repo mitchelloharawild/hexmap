@@ -1,12 +1,12 @@
 # hexmap: Convert a Map into a Hexagon Tile Map
 
 Converts a map of regions, as an 'sf' object, into a map of equally
-sized hexagons with one hexagon for each region. Each region is
-allocated the hexagon that minimises the total squared displacement of
-all regions, so regions keep their relative positions, while distant
-islands are tiled separately. Groups of regions (such as states) can be
-kept together using one of several layouts, including a diffusion
-cartogram (Gastner and Newman, 2004)
+sized hexagons with one hexagon for each region. Regions are allocated
+hexagons by minimising the total squared displacement of all regions, so
+regions keep their relative positions, while distant islands are tiled
+separately. Groups of regions (such as states) can be kept together
+using one of several layouts, including a diffusion cartogram (Gastner
+and Newman, 2004)
 [doi:10.1073/pnas.0400280101](https://doi.org/10.1073/pnas.0400280101)
 and spatially ordered treemaps (Wood and Dykes, 2008)
 [doi:10.1109/TVCG.2008.165](https://doi.org/10.1109/TVCG.2008.165) .

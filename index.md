@@ -37,8 +37,8 @@ hexmap(electorates, group = state)
   are kept together, separated by a small gap (`group_gap`), and touch
   the same neighbouring groups as on the map.
 
-- **Group layouts.** `group_layout` sets how groups are arranged: groups
-  that keep their own shapes and positions
+- **Layouts.** `layout` sets how the hexagons and groups are arranged:
+  groups that keep their own shapes and positions
   ([`layout_hierarchy()`](https://numbats.github.io/hexmap/reference/layouts.md),
   the default), a cartogram that keeps more of the overall outline
   ([`layout_diffusion()`](https://numbats.github.io/hexmap/reference/layouts.md)),
@@ -74,16 +74,6 @@ hexmap(electorates, group = state)
   electorates |>
     dplyr::mutate(hex = hexmap(geometry, group = state))
   ```
-
-Without groups,
-[`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md) works
-in two steps that are also available on their own:
-[`hex_grid()`](https://numbats.github.io/hexmap/reference/hex_grid.md)
-tiles a map with hexagons, and
-[`hex_allocate()`](https://numbats.github.io/hexmap/reference/hex_allocate.md)
-allocates them to regions, so `hexmap(x)` is the same as
-`hex_allocate(x, hex_grid(x))`. With groups, the hexagons are instead
-made and allocated by the layout.
 
 ## Example: the 2025 Australian federal election
 

@@ -73,7 +73,7 @@ rarely need the same space in hexagons as they cover on the map: New
 South Wales has 46 of the 150 divisions at the 2025 Australian federal
 election, but only a tenth of the land, while Western Australia has a
 third of the land but only 16 divisions. The map has to be distorted to
-fit, and <code>group_layout</code> chooses how.</p>
+fit, and <code>layout</code> chooses how.</p>
 <p>Each layout keeps some things and gives up others:</p>
 <ul>
 <li>the <strong>outline</strong> of the whole map, such as the coastline
@@ -96,9 +96,9 @@ Australian Albers equal-area projection:</p>
 </h2>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">hierarchy</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span><span class="op">)</span></span>
-<span><span class="va">diffusion</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, group_layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_diffusion</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">compact</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, group_layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_compact</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">slice</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, group_layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_slice</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">diffusion</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_diffusion</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">compact</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_compact</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">slice</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>, layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_slice</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="layouts_files/figure-html/layout-maps-1.png" class="r-plt" alt="" width="100%"></p>
 <ul>
 <li>
@@ -166,7 +166,7 @@ map. It fixes the ACT in the diffusion layout, and three of the five
 mistakes in the compact layout:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">repaired</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span>,</span>
-<span>                   group_layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_repair</a></span><span class="op">(</span><span class="fu"><a href="../reference/layouts.html">layout_compact</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span>                   layout <span class="op">=</span> <span class="fu"><a href="../reference/layouts.html">layout_repair</a></span><span class="op">(</span><span class="fu"><a href="../reference/layouts.html">layout_compact</a></span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
 <p><img src="layouts_files/figure-html/repair-map-1.png" class="r-plt" alt="" width="100%"></p>
 <p>Repairing only swaps hexagons along the borders between groups,
 keeping the hexagons of the layout, so it can’t move whole blocks:

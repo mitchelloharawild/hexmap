@@ -1,11 +1,12 @@
-# Layouts for groups of hexagons
+# Layouts of hexagons
 
-These functions create a layout for the `group_layout` argument of
+These functions create a layout for the `layout` argument of
 [`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md),
-which arranges the hexagons of each group (e.g. state). Groups usually
-need a very different area of hexagons than they cover on the map (e.g.
-densely populated states have many small regions), so the map has to be
-distorted, and each layout distorts it differently. See
+which arranges the hexagons, and the hexagons of each group (e.g.
+state). Groups usually need a very different area of hexagons than they
+cover on the map (e.g. densely populated states have many small
+regions), so the map has to be distorted, and each layout distorts it
+differently. See
 [`vignette("layouts")`](https://numbats.github.io/hexmap/articles/layouts.md)
 for how they compare.
 
@@ -104,10 +105,17 @@ layout_repair(layout, iterations = 30, border = 0)
 
 ## Value
 
-A layout function, for the `group_layout` argument of
+A layout function, for the `layout` argument of
 [`hexmap()`](https://numbats.github.io/hexmap/reference/hexmap.md).
 
 ## Details
+
+Without groups, all regions form a single group, which every layout
+keeps close to the outline of the map, except `layout_compact()`, which
+draws it as one compact block, and `layout_slice()`, which draws each
+landmass as a rectangle of hexagons. `layout_diffusion()` then places
+each region on the hexagon that minimises the total squared displacement
+of all regions, so no two regions swap their relative position.
 
 - `layout_hierarchy()` (the default) lays out the groups first, then the
   regions within each group. The groups are warped by a diffusion
@@ -184,11 +192,12 @@ from 0 (ignore it) upwards, and keep it more as they increase:
 ## Custom layouts
 
 A layout is a function with arguments `geometry` (the regions'
-geometry), `group` (the group of each region), `land` and `cellsize`
-(the width of the hexagons to use), which returns the hexagon of each
-region as an `sfc` of polygons. `land` is a list with the separately
-tiled landmasses as `geometry`, and the landmass of each region as
-`region`. Each group's hexagons should be contiguous on each landmass.
+geometry), `group` (the group of each region, all equal without groups),
+`land` and `cellsize` (the width of the hexagons to use), which returns
+the hexagon of each region as an `sfc` of polygons. `land` is a list
+with the separately tiled landmasses as `geometry`, and the landmass of
+each region as `region`. Each group's hexagons should be contiguous on
+each landmass.
 
 ## References
 
@@ -210,18 +219,18 @@ election <- st_transform(aus_election_2025, 3577)
 nsw <- st_coordinates(st_centroid(st_union(election[election$state == "NSW", ])))
 anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
 election_hex <- hexmap(election, group = state,
-                       group_layout = layout_compact(anchor = anchor))
+                       layout = layout_compact(anchor = anchor))
 
 # \donttest{
 # The other layouts take a few seconds each
 # Each state keeps its shape, at the expense of the outline of Australia
 election_hex <- hexmap(election, group = state,
-                       group_layout = layout_hierarchy())
+                       layout = layout_hierarchy())
 # Keep more of the outline of Australia
 election_hex <- hexmap(election, group = state,
-                       group_layout = layout_diffusion(cartogram = 0.5))
+                       layout = layout_diffusion(cartogram = 0.5))
 # Compact blocks that touch as the states do
 election_hex <- hexmap(election, group = state,
-                       group_layout = layout_repair(layout_compact()))
+                       layout = layout_repair(layout_compact()))
 # }
 ```

@@ -1,8 +1,9 @@
 # Convert a map into a hexagon tile map
 
 Replaces each region of a map with a hexagon of equal size. The hexagons
-tile the outline of the map, and each region is allocated the hexagon
-that minimises the total squared displacement of all regions.
+tile the outline of the map, and regions are allocated hexagons by
+minimising the total squared displacement of all regions (from where the
+layout moves them), so regions keep their relative positions.
 
 ## Usage
 
@@ -10,7 +11,7 @@ that minimises the total squared displacement of all regions.
 hexmap(
   object,
   group = NULL,
-  group_layout = layout_hierarchy(),
+  layout = layout_hierarchy(),
   island_gap = 0.5,
   group_gap = 0.1,
   crs = NULL
@@ -30,9 +31,10 @@ hexmap(
   `object` given unquoted (`group = state`) or as a string
   (`group = "state"`), or as a vector with one value for each region.
 
-- group_layout:
+- layout:
 
-  How groups are arranged, as a layout function such as
+  How the hexagons (and groups) are arranged, as a layout function such
+  as
   [`layout_hierarchy()`](https://numbats.github.io/hexmap/reference/layouts.md)
   (the default),
   [`layout_diffusion()`](https://numbats.github.io/hexmap/reference/layouts.md),
@@ -41,7 +43,7 @@ hexmap(
   [`layout_slice()`](https://numbats.github.io/hexmap/reference/layouts.md),
   optionally wrapped in
   [`layout_repair()`](https://numbats.github.io/hexmap/reference/layouts.md)
-  to fix which groups touch. Only used with `group`.
+  to fix which groups touch.
 
 - island_gap:
 
@@ -83,14 +85,17 @@ tiled separately, with one hexagon for each region on that landmass.
 Their hexagons are separated by at least one empty hexagon, so islands
 such as Tasmania remain distinct from the mainland.
 
-When `group` is given, the hexagons of each group (e.g. state) are kept
-contiguous and a gap of `group_gap` hexagon widths is cut along the
-borders between groups, so that each group is visually distinct. Groups
-usually need a very different area of hexagons than they cover on the
-map, so the map is distorted to fit them, as chosen by `group_layout`.
-By default, the groups are laid out first, keeping each group's shape
-and touching the groups it borders on the map, and the regions are then
-placed within each group. See
+The hexagons are arranged by `layout`. When `group` is given, the
+hexagons of each group (e.g. state) are kept contiguous and a gap of
+`group_gap` hexagon widths is cut along the borders between groups, so
+that each group is visually distinct. Groups usually need a very
+different area of hexagons than they cover on the map, so the map is
+distorted to fit them, and each layout distorts it differently. By
+default, the groups are laid out first, keeping each group's shape and
+touching the groups it borders on the map, and the regions are then
+placed within each group. Without `group`, all regions form a single
+group, so the layout only sets the shape of the hexagons and where
+regions are placed within them. See
 [layouts](https://numbats.github.io/hexmap/reference/layouts.md) for the
 available layouts, and
 [`vignette("layouts")`](https://numbats.github.io/hexmap/articles/layouts.md)
@@ -109,16 +114,14 @@ for details.
 
 ## See also
 
-[`hex_grid()`](https://numbats.github.io/hexmap/reference/hex_grid.md)
-and
-[`hex_allocate()`](https://numbats.github.io/hexmap/reference/hex_allocate.md),
-which make an ungrouped hexagon map in two steps: `hexmap(x)` is the
-same as `hex_allocate(x, hex_grid(x))`.
+[layouts](https://numbats.github.io/hexmap/reference/layouts.md) for how
+the hexagons are arranged.
 
 ## Examples
 
 ``` r
 library(sf)
+#> Linking to GEOS 3.14.1, GDAL 3.12.2, PROJ 9.7.1; sf_use_s2() is TRUE
 # The 2025 Australian federal election, in the Australian Albers projection
 election <- st_transform(aus_election_2025, 3577)
 # A hexagon for each electoral division
@@ -129,17 +132,17 @@ head(election_hex)
 #> Simple feature collection with 6 features and 3 fields
 #> Geometry type: POLYGON
 #> Dimension:     XY
-#> Bounding box:  xmin: -1118770 ymin: -3831910 xmax: 1677985 ymax: -2287407
+#> Bounding box:  xmin: -1153976 ymin: -3817828 xmax: 1522580 ymax: -2272518
 #> Projected CRS: GDA94 / Australian Albers
 #> # A tibble: 6 × 4
 #>   division state party                                                  geometry
 #>   <chr>    <chr> <chr>                                             <POLYGON [m]>
-#> 1 Adelaide SA    ALP   ((-875573.9 -2568225, -997171.9 -2498021, -997171.9 -235…
-#> 2 Aston    VIC   ALP   ((340406.7 -3410682, 218808.6 -3340477, 218808.6 -320006…
-#> 3 Ballarat VIC   ALP   ((-997171.9 -3200068, -1118770 -3129863, -1118770 -29894…
-#> 4 Banks    NSW   ALP   ((1313191 -3831910, 1191593 -3761705, 1191593 -3621296, …
-#> 5 Barker   SA    LP    ((-753975.8 -2778840, -875573.9 -2708635, -875573.9 -256…
-#> 6 Barton   NSW   ALP   ((1556387 -3831910, 1434789 -3761705, 1434789 -3621296, …
+#> 1 Adelaide SA    ALP   ((-788991 -2553483, -910652.6 -2483242, -910652.6 -23427…
+#> 2 Aston    VIC   ALP   ((427625.3 -3396380, 305963.7 -3326138, 305963.7 -318565…
+#> 3 Ballarat VIC   ALP   ((-1032314 -3396380, -1153976 -3326138, -1153976 -318565…
+#> 4 Banks    NSW   ALP   ((1279257 -3607104, 1157595 -3536863, 1157595 -3396380, …
+#> 5 Barker   SA    LP    ((-788991 -2974932, -910652.6 -2904690, -910652.6 -27642…
+#> 6 Barton   NSW   ALP   ((1400918 -3817828, 1279257 -3747587, 1279257 -3607104, …
 
 # \donttest{
 # Keep the divisions of each state together (takes a few seconds)
