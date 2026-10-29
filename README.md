@@ -43,9 +43,10 @@ hexmap(electorates, group = state)
   the same neighbouring groups as on the map.
 - **Group layouts.** `group_layout` sets how groups are arranged: warped
   into a cartogram that keeps each group’s shape (`layout_diffusion()`,
-  the default), compact blocks (`layout_compact()`), or a spatial
-  treemap (`layout_slice()`). `layout_repair()` fixes the borders
-  between groups of any layout.
+  the default), compact blocks (`layout_compact()`), a spatial treemap
+  (`layout_slice()`), or groups that keep their own shapes at the
+  expense of the overall outline (`layout_hierarchy()`).
+  `layout_repair()` fixes the borders between groups of any layout.
 - **Islands.** Distant landmasses, such as Tasmania, are tiled
   separately and kept apart from the mainland (`island_gap`).
 - **Projections.** Hexagons are regular in the projection they are made
@@ -66,6 +67,8 @@ the map beyond recognition. A hexagon grid made with
 [geogrid](https://github.com/jbaileyh/geogrid) gives each division the
 same space, but doesn’t keep states together. hexmap keeps each state
 together, in its place and with its neighbours.
+
+<img src="man/figures/README-animation-.gif" alt="" width="100%" />
 
 hexmap includes the results as `aus_election2025`: the simplified
 boundaries of each division from the [Australian Bureau of
