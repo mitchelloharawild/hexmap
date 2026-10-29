@@ -14,10 +14,10 @@ knitr::opts_chunk$set(
 )
 ```
 
-# hexmap <a href="https://numbats.github.io/hexmap/"><img src="man/figures/logo.png" align="right" height="138" alt="hexmap website" /></a>
+# hexmap <a href="https://pkg.mitchelloharawild.com/hexmap/"><img src="man/figures/logo.png" align="right" height="138" alt="hexmap website" /></a>
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/numbats/hexmap/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/numbats/hexmap/actions/workflows/R-CMD-check.yaml)
+[![R-CMD-check](https://github.com/mitchelloharawild/hexmap/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/mitchelloharawild/hexmap/actions/workflows/R-CMD-check.yaml)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
 [![CRAN status](https://www.r-pkg.org/badges/version/hexmap)](https://CRAN.R-project.org/package=hexmap)
 <!-- badges: end -->
@@ -26,49 +26,63 @@ hexmap converts a map of regions into a map of equally sized hexagons, one for e
 
 ## Installation
 
-You can install the development version of hexmap like so:
+Install the development version from GitHub with:
 
 ``` r
 install.packages("remotes")
-remotes::install_github("numbats/hexmap")
+remotes::install_github("mitchelloharawild/hexmap")
 ```
 
 ## Usage
 
-`hexmap()` takes an `sf` object and returns it with each region's geometry replaced by a hexagon:
+`hexmap()` replaces each region of an `sf` object with a hexagon, keeping every other column and the order of the rows. Regions are placed to keep their relative positions, and distant islands such as Tasmania are tiled separately.
 
-``` r
+```{r usage, message = FALSE, fig.width = 6, fig.height = 4.5, out.width = "70%"}
 library(hexmap)
-hexmap(electorates)
-hexmap(electorates, group = state)
+hex <- hexmap(aus_election_2025)
+hex
+plot(hex["state"])
 ```
 
-* **Optimal placement.** Each region gets the hexagon that minimises the total squared distance between regions and their hexagons, so the relative positions of regions are kept.
-* **Groups.** With `group`, the hexagons of each group (such as a state) are kept together, separated by a small gap (`group_gap`), and touch the same neighbouring groups as on the map.
-* **Layouts.** `layout` sets how the hexagons and groups are arranged: groups that keep their own shapes and positions (`layout_hierarchy()`, the default), a cartogram that keeps more of the overall outline (`layout_diffusion()`), compact blocks (`layout_compact()`), or a spatial treemap (`layout_slice()`). `layout_repair()` fixes the borders between groups of any layout. See `vignette("layouts")` for how they compare.
-* **Islands.** Distant landmasses, such as Tasmania, are tiled separately and kept apart from the mainland (`island_gap`).
-* **Projections.** Hexagons are regular in the projection they are made in (`crs`), which defaults to an equal-area projection for maps in longitude and latitude. See `vignette("projections")`.
-* **Keeps your data.** `hexmap()` returns the map with each region's geometry replaced by its hexagon, keeping every other column and the order of the rows, so the hexagons are easy to join to or compare with the regions. Given a geometry column instead, it returns a geometry column of hexagons, so it can be used in `dplyr::mutate()` to keep both:
+Use `group` to keep the hexagons of each group, such as a state, together and touching the same neighbouring groups as on the map:
 
-  ``` r
-  electorates |>
-    dplyr::mutate(hex = hexmap(geometry, group = state))
-  ```
+```{r usage-group, message = FALSE, fig.width = 6, fig.height = 4.5, out.width = "70%"}
+hex <- hexmap(aus_election_2025, group = state)
+plot(hex["state"])
+```
+
+Use `layout` to choose how the groups are arranged. See [`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.html) for how the layouts compare.
+
+```{r usage-layout, message = FALSE, fig.width = 6, fig.height = 4.5, out.width = "70%"}
+hex <- hexmap(aus_election_2025, group = state, layout = layout_compact())
+plot(hex["state"])
+```
+
+The hexagons are regular in the projection they are made in, which is an equal-area projection for longitude/latitude maps unless you choose one with `crs`. See [`vignette("projections")`](https://pkg.mitchelloharawild.com/hexmap/articles/projections.html).
+
+```{r usage-crs, fig.width = 6, fig.height = 4.5, out.width = "70%"}
+hex <- hexmap(aus_election_2025, group = state, crs = 3577)
+plot(hex["state"])
+```
+
+Given a geometry column, `hexmap()` returns a geometry column of hexagons, so you can keep both:
+
+```{r usage-column, message = FALSE}
+aus_election_2025 |>
+  dplyr::mutate(hex = hexmap(geometry, group = state))
+```
 
 ## Example: the 2025 Australian federal election
 
-Labor won 94 of the 150 seats at the 2025 Australian federal election. On a geographic map the result looks like a Coalition win, as the large rural divisions hide Labor's many small city seats. A cartogram with equal areas for each division shows the number of seats, but distorts the map beyond recognition. A hexagon grid made with [geogrid](https://github.com/jbaileyh/geogrid) gives each division the same space, but doesn't keep states together. hexmap keeps each state together, in its place and with its neighbours.
+Labor won 94 of the 150 seats at the 2025 Australian federal election. On a geographic map the result looks like a Coalition win, as the large rural divisions hide Labor's many small city seats. A cartogram produced with [cartogram](https://github.com/sjewo/cartogram), which distorts regions so their areas are proportional to a variable, can give each division an equal area to show the number of seats, but it distorts the map beyond recognition. A hexagon grid produced with [geogrid](https://github.com/jbaileyh/geogrid), which allocates regions to a regular grid of hexagons or squares, gives each division the same space, but doesn't keep states together. hexmap keeps each state together, in its place and with its neighbours.
+
+```{r election-setup, include = FALSE, ref.label = "election-data"}
+```
 
 ```{r animation, echo = FALSE, message = FALSE, fig.width = 7, fig.height = 6.5, dpi = 100, fig.show = "animate", animation.hook = "gifski", interval = 1/20}
-library(sf)
 library(ggplot2)
-library(hexmap)
 
-party <- c(ALP = "Labor", LP = "Coalition", LNP = "Coalition", NP = "Coalition",
-           GRN = "Greens")
 colours <- c(Labor = "#D7263D", Coalition = "#1F4E9C", Greens = "#2E9E44", Other = "#8C8C8C")
-election <- st_transform(aus_election_2025, 3577)
-election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
 election_hexmap <- hexmap(election, group = state)
 
 # Resample a closed ring to n points equally spaced along its boundary, anticlockwise
@@ -99,8 +113,8 @@ rings <- morph_rings(st_geometry(election), st_geometry(election_hexmap))
 rings$party <- election$party[rings$region]
 
 # Pause on the map, ease into the hexagons, pause, then ease back
-t <- c(rep(0, 10), (1 - cos(pi * seq(0, 1, length.out = 30))) / 2, rep(1, 15))
-for (t in c(t, rev(t))) {
+ease <- c(rep(0, 10), (1 - cos(pi * seq(0, 1, length.out = 30))) / 2, rep(1, 15))
+for (t in c(ease, rev(ease))) {
   frame <- transform(rings, x = x0 + t * (x1 - x0), y = y0 + t * (y1 - y0))
   print(
     ggplot(frame, aes(x, y, group = ring, fill = party)) +
@@ -113,7 +127,7 @@ for (t in c(t, rev(t))) {
 }
 ```
 
-hexmap includes the results as `aus_election_2025`: the simplified boundaries of each division from the [Australian Bureau of Statistics](https://www.abs.gov.au/), with its state and the party that won it from the [Australian Electoral Commission](https://www.aec.gov.au/), licensed under CC BY 4.0. The maps below are made in the Australian Albers equal-area projection, with the minor parties combined:
+The results are included as `aus_election_2025`: the simplified boundaries of each division from the [Australian Bureau of Statistics](https://www.abs.gov.au/), with its state and winning party from the [Australian Electoral Commission](https://www.aec.gov.au/) (CC BY 4.0). The maps below use the Australian Albers equal-area projection, with minor parties combined:
 
 ```{r election-data, message = FALSE}
 library(sf)
@@ -125,7 +139,7 @@ election <- st_transform(aus_election_2025, 3577)
 election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
 ```
 
-Each method then gives every division the same area:
+Each method gives every division the same area:
 
 ```{r election-maps, message = FALSE}
 library(cartogram)
@@ -144,10 +158,8 @@ election_hexmap <- hexmap(election, group = state)
 ```
 
 ```{r comparison, echo = FALSE, message = FALSE, fig.width = 8, fig.height = 7}
-library(ggplot2)
 library(patchwork)
 
-colours <- c(Labor = "#D7263D", Coalition = "#1F4E9C", Greens = "#2E9E44", Other = "#8C8C8C")
 election_map <- function(map, title) {
   # Merge each state's regions, closing small gaps between them
   d <- 0.03 * sqrt(median(as.numeric(st_area(map))))
@@ -169,7 +181,7 @@ election_map(election, "Geographic map") +
   theme(legend.position = "bottom")
 ```
 
-Colouring the divisions by state shows the difference. geogrid scatters the divisions of each state across the grid, so four of Tasmania's five seats end up on the mainland. hexmap keeps each state in one piece, touching the same states as on the map.
+Colouring the divisions by state shows the difference: geogrid scatters each state's divisions across the grid, putting four of Tasmania's five seats on the mainland, while hexmap keeps each state in one piece, touching the same states as on the map.
 
 ```{r states, echo = FALSE, fig.width = 8, fig.height = 3.5}
 state_map <- function(map, title) {
@@ -184,10 +196,3 @@ state_map(election_geogrid, "geogrid") +
   state_map(election_hexmap, "hexmap, grouped by state") +
   plot_layout(guides = "collect")
 ```
-
-The code for the plots (with ggplot2 and patchwork) is in [`README.Rmd`](README.Rmd).
-
-## Related
-
-- [geogrid](https://github.com/jbaileyh/geogrid) allocates regions to a regular grid of hexagons or squares.
-- [cartogram](https://github.com/sjewo/cartogram) distorts regions so their areas are proportional to a variable.
