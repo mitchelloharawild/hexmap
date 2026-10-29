@@ -38,9 +38,11 @@ hexmap(electorates, group = state)
 - **Optimal placement.** Each region gets the hexagon that minimises the
   total squared distance between regions and their hexagons, so the
   relative positions of regions are kept.
+
 - **Groups.** With `group`, the hexagons of each group (such as a state)
   are kept together, separated by a small gap (`group_gap`), and touch
   the same neighbouring groups as on the map.
+
 - **Group layouts.** `group_layout` sets how groups are arranged: groups
   that keep their own shapes and positions (`layout_hierarchy()`, the
   default), a cartogram that keeps more of the overall outline
@@ -48,15 +50,31 @@ hexmap(electorates, group = state)
   spatial treemap (`layout_slice()`). `layout_repair()` fixes the
   borders between groups of any layout. See `vignette("layouts")` for
   how they compare.
+
 - **Islands.** Distant landmasses, such as Tasmania, are tiled
   separately and kept apart from the mainland (`island_gap`).
+
 - **Projections.** Hexagons are regular in the projection they are made
   in (`crs`), which defaults to an equal-area projection for maps in
   longitude and latitude. See `vignette("projections")`.
 
-The two steps of `hexmap()` are also available on their own:
-`hex_grid()` tiles a map with hexagons, and `tile_allocate()` allocates
-them to regions.
+- **Keeps your data.** `hexmap()` returns the map with each region’s
+  geometry replaced by its hexagon, keeping every other column and the
+  order of the rows, so the hexagons are easy to join to or compare with
+  the regions. Given a geometry column instead, it returns a geometry
+  column of hexagons, so it can be used in `dplyr::mutate()` to keep
+  both:
+
+  ``` r
+  electorates |>
+    dplyr::mutate(hex = hexmap(geometry, group = state))
+  ```
+
+Without groups, `hexmap()` works in two steps that are also available on
+their own: `hex_grid()` tiles a map with hexagons, and `hex_allocate()`
+allocates them to regions, so `hexmap(x)` is the same as
+`hex_allocate(x, hex_grid(x))`. With groups, the hexagons are instead
+made and allocated by the layout.
 
 ## Example: the 2025 Australian federal election
 
@@ -71,7 +89,7 @@ together, in its place and with its neighbours.
 
 <img src="man/figures/README-animation-.gif" alt="" width="100%" />
 
-hexmap includes the results as `aus_election2025`: the simplified
+hexmap includes the results as `aus_election_2025`: the simplified
 boundaries of each division from the [Australian Bureau of
 Statistics](https://www.abs.gov.au/), with its state and the party that
 won it from the [Australian Electoral
@@ -85,7 +103,7 @@ library(hexmap)
 
 party <- c(ALP = "Labor", LP = "Coalition", LNP = "Coalition", NP = "Coalition",
            GRN = "Greens")
-election <- st_transform(aus_election2025, 3577)
+election <- st_transform(aus_election_2025, 3577)
 election$party <- ifelse(election$party %in% names(party), party[election$party], "Other")
 ```
 

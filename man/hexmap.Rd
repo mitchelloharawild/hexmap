@@ -14,23 +14,25 @@ hexmap(
 )
 }
 \arguments{
-\item{object}{An sf object in a projected or longitude/latitude
-coordinate reference system.}
+\item{object}{An sf object, or a geometry column (sfc), of regions in a
+projected or longitude/latitude coordinate reference system.}
 
-\item{group}{Optionally, a column of \code{object} (unquoted) that groups its
-regions (e.g. states).}
+\item{group}{Optionally, the group of each region (e.g. states), as a column
+of \code{object} given unquoted (\code{group = state}) or as a string
+(\code{group = "state"}), or as a vector with one value for each region.}
 
 \item{group_layout}{How groups are arranged, as a layout function such as
 \code{\link[=layout_hierarchy]{layout_hierarchy()}} (the default), \code{\link[=layout_diffusion]{layout_diffusion()}},
 \code{\link[=layout_compact]{layout_compact()}} or \code{\link[=layout_slice]{layout_slice()}}, optionally wrapped in
-\code{\link[=layout_repair]{layout_repair()}} to fix which groups touch.}
+\code{\link[=layout_repair]{layout_repair()}} to fix which groups touch. Only used with \code{group}.}
 
 \item{island_gap}{The distance, in hexagon widths, beyond which landmasses
 are tiled as separate islands. Use \code{Inf} to tile all land together.}
 
 \item{group_gap}{The width of the gap between groups, as a fraction of the
 hexagon width. The hexagons along group borders are trimmed to make this
-gap, so they are slightly smaller than other hexagons.}
+gap, so they are slightly smaller than other hexagons. Only used with
+\code{group}.}
 
 \item{crs}{The projected coordinate reference system to make the hexagons
 in, such as the one the map will be plotted in. \code{object} is transformed
@@ -39,8 +41,12 @@ for longitude/latitude input, to a Lambert azimuthal equal-area CRS
 centred on the data (\code{"+proj=laea +lat_0=... +lon_0=..."}).}
 }
 \value{
-\code{object} with its geometry replaced by hexagons, in the coordinate reference
-system they were made in.
+For an sf object, \code{object} with its geometry replaced by hexagons, keeping
+all of its other columns and the order of its rows, so the hexagons can be
+joined to or compared with the original regions. For a geometry column, a
+geometry column of hexagons in the same order, so \code{hexmap()} can be used
+within \code{dplyr::mutate()} to add the hexagons as another geometry column.
+The hexagons are in the coordinate reference system they were made in.
 }
 \description{
 Replaces each region of a map with a hexagon of equal size. The hexagons
@@ -73,29 +79,32 @@ CRS you will plot in. Use an equal-area CRS for hexagons that also cover
 equal areas on the ground. See \code{vignette("projections")} for details.
 }
 \examples{
-\dontshow{if (requireNamespace("ozmaps", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(sf)
-# Australian electoral divisions without offshore territories, and their state
-ced <- st_crop(ozmaps::abs_ced, xmin = 112, ymin = -44, xmax = 154, ymax = -9)
-ced <- st_simplify(st_transform(ced, 3577), dTolerance = 1000)
-states <- st_transform(ozmaps::abs_ste, 3577)
-names(states)[1] <- "state"
-ced <- st_join(ced, states, largest = TRUE)
+# The 2025 Australian federal election, in the Australian Albers projection
+election <- st_transform(aus_election_2025, 3577)
+election_hex <- hexmap(election, group = state)
 
-ced_hex <- hexmap(ced, group = state)
+# Every column of the map is kept, in the same order
+head(election_hex)
 
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(ggplot2)
-ggplot(ced_hex) +
-  geom_sf(aes(fill = state))
+ggplot(election_hex) +
+  geom_sf(aes(fill = party))
 
 # Hexagons made for a globe centred on Australia
 globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
-ggplot(hexmap(ced, crs = globe)) +
+ggplot(hexmap(election, group = state, crs = globe)) +
   geom_sf(aes(fill = state)) +
   coord_sf(crs = globe)
 \dontshow{\}) # examplesIf}
+\dontshow{if (requireNamespace("dplyr", quietly = TRUE)) withAutoprint(\{ # examplesIf}
+# Add the hexagons as a second geometry column, alongside the regions
+election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
+\dontshow{\}) # examplesIf}
 }
 \seealso{
-\code{\link[=hex_grid]{hex_grid()}} to create the hexagons and \code{\link[=tile_allocate]{tile_allocate()}} to
-allocate them to regions.
+\code{\link[=hex_grid]{hex_grid()}} and \code{\link[=hex_allocate]{hex_allocate()}}, which make an ungrouped hexagon
+map in two steps: \code{hexmap(x)} is the same as
+\code{hex_allocate(x, hex_grid(x))}.
 }

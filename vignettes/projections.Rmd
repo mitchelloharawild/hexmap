@@ -23,13 +23,10 @@ library(sf)
 library(ggplot2)
 ```
 
-The examples use the Australian federal electoral divisions from the ozmaps package, without offshore territories, and the state of each division:
+The examples use the electoral divisions of the 2025 Australian federal election included in hexmap, in longitude and latitude, with the state of each division:
 
-```{r data, warning = FALSE}
-ced <- st_crop(ozmaps::abs_ced, xmin = 112, ymin = -44, xmax = 154, ymax = -9)
-states <- ozmaps::abs_ste
-names(states)[1] <- "state"
-ced <- st_join(st_make_valid(ced), st_make_valid(states), largest = TRUE)
+```{r data}
+ced <- aus_election_2025
 ```
 
 ```{r helpers, include = FALSE}

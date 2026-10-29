@@ -35,6 +35,7 @@ Depends:
     R (>= 4.1)
 LazyData: true
 Suggests:
+    dplyr,
     ggplot2,
     knitr,
     ozmaps,

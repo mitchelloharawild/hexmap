@@ -4,23 +4,27 @@
 \alias{hex_grid}
 \title{Create a hexagon grid that tiles a geometry}
 \usage{
-hex_grid(object, n_tiles = 100, island_gap = 0.5)
+hex_grid(object, n_tiles = NROW(object), island_gap = 0.5, crs = NULL)
 }
 \arguments{
-\item{object}{An sf object or geometry to tile, in a projected coordinate
-reference system. The hexagons are regular and equally sized in this
-coordinate reference system (see \code{vignette("projections")}). It is
-recommended to first simplify this geometry to speed up the hexagon
-tiling.}
+\item{object}{An sf object, or a geometry column (sfc), to tile. It is
+recommended to first simplify the geometry to speed up the tiling.}
 
-\item{n_tiles}{The number of tiles to use for representing the geometry.}
+\item{n_tiles}{The number of hexagons. Defaults to one for each region of
+\code{object}.}
 
 \item{island_gap}{The distance, in hexagon widths, beyond which landmasses
-are tiled as separate islands. Closer landmasses are tiled together. Use
-\code{Inf} to tile all land together.}
+are tiled as separate islands. Use \code{Inf} to tile all land together.}
+
+\item{crs}{The projected coordinate reference system to make the hexagons
+in, such as the one the map will be plotted in. \code{object} is transformed
+to \code{crs} with \code{\link[sf:st_transform]{sf::st_transform()}}. Defaults to the CRS of \code{object}, or
+for longitude/latitude input, to a Lambert azimuthal equal-area CRS
+centred on the data (\code{"+proj=laea +lat_0=... +lon_0=..."}).}
 }
 \value{
-A vector of \code{n_tiles} hexagon geometries that tile the input geometry.
+A geometry column (sfc) of \code{n_tiles} hexagons that tile the input
+geometry, in the coordinate reference system they were made in.
 }
 \description{
 Tiles a geometry with exactly \code{n_tiles} equally sized hexagons. The hexagon
@@ -29,20 +33,31 @@ geometry, and the hexagons that overlap the geometry the most are kept.
 }
 \details{
 Landmasses that are further apart than \code{island_gap} hexagon widths are
-tiled separately, with their share of the \code{n_tiles} hexagons proportional
-to their area. The hexagons of different landmasses are always separated
+tiled separately. The hexagons of different landmasses are always separated
 by at least one empty hexagon, so islands such as Tasmania remain visibly
-distinct from the mainland.
+distinct from the mainland. When \code{object} has several regions, each
+landmass gets a share of the \code{n_tiles} hexagons in proportion to its number
+of regions (so by default, exactly one hexagon for each of its regions, as
+in \code{\link[=hexmap]{hexmap()}}). A single geometry is shared between its landmasses in
+proportion to their area.
+
+\code{hex_grid()} and \code{\link[=hex_allocate]{hex_allocate()}} are the two steps of an ungrouped
+\code{\link[=hexmap]{hexmap()}}: \code{hexmap(x)} is the same as \code{hex_allocate(x, hex_grid(x))}.
+Grouped hexagon maps are instead made by a \link[=layouts]{layout}.
 }
 \examples{
-library(ozmaps)
 library(sf)
-australia <- st_transform(abs_ste, 3577)
+election <- st_transform(aus_election_2025, 3577)
+# A hexagon for each electoral division
+grid <- hex_grid(election)
+# The outline of Australia with 75 hexagons
+australia <- st_union(election)
 grid <- hex_grid(australia, n_tiles = 75)
 
+\dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 library(ggplot2)
 ggplot() +
   geom_sf(data = australia) +
   geom_sf(data = grid, fill = "steelblue", alpha = 0.2)
-
+\dontshow{\}) # examplesIf}
 }

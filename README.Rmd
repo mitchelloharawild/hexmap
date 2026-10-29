@@ -46,8 +46,14 @@ hexmap(electorates, group = state)
 * **Group layouts.** `group_layout` sets how groups are arranged: groups that keep their own shapes and positions (`layout_hierarchy()`, the default), a cartogram that keeps more of the overall outline (`layout_diffusion()`), compact blocks (`layout_compact()`), or a spatial treemap (`layout_slice()`). `layout_repair()` fixes the borders between groups of any layout. See `vignette("layouts")` for how they compare.
 * **Islands.** Distant landmasses, such as Tasmania, are tiled separately and kept apart from the mainland (`island_gap`).
 * **Projections.** Hexagons are regular in the projection they are made in (`crs`), which defaults to an equal-area projection for maps in longitude and latitude. See `vignette("projections")`.
+* **Keeps your data.** `hexmap()` returns the map with each region's geometry replaced by its hexagon, keeping every other column and the order of the rows, so the hexagons are easy to join to or compare with the regions. Given a geometry column instead, it returns a geometry column of hexagons, so it can be used in `dplyr::mutate()` to keep both:
 
-The two steps of `hexmap()` are also available on their own: `hex_grid()` tiles a map with hexagons, and `tile_allocate()` allocates them to regions.
+  ``` r
+  electorates |>
+    dplyr::mutate(hex = hexmap(geometry, group = state))
+  ```
+
+Without groups, `hexmap()` works in two steps that are also available on their own: `hex_grid()` tiles a map with hexagons, and `hex_allocate()` allocates them to regions, so `hexmap(x)` is the same as `hex_allocate(x, hex_grid(x))`. With groups, the hexagons are instead made and allocated by the layout.
 
 ## Example: the 2025 Australian federal election
 

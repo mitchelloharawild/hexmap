@@ -1,14 +1,19 @@
-#' Allocates tiled geometries to original map geometries
+#' Allocate hexagons to the regions of a map
 #'
-#' Allocates each tile to exactly one of the original geometries, such that
-#' the total squared distance between each geometry and its tile is minimised.
-#' This optimal assignment is solved with the Hungarian algorithm via
-#' [clue::solve_LSAP()].
+#' Allocates each tile to exactly one region, such that the total squared
+#' distance between each region and its tile is minimised. This optimal
+#' assignment is solved with the Hungarian algorithm via [clue::solve_LSAP()].
 #'
 #' Minimising squared (rather than absolute) distance guarantees that no two
-#' geometries swap their relative position: for any two regions, the
+#' regions swap their relative position: for any two regions, the
 #' displacement from one tile to the other never points against the
 #' displacement between the original regions.
+#'
+#' The tiles are split into islands of adjacent tiles, such as those made for
+#' each landmass by [hex_grid()], and each region is only allocated a tile on
+#' the island nearest to it, provided that every island has one tile for each
+#' of its nearest regions. Otherwise, regions are allocated tiles from all
+#' islands.
 #'
 #' When `group` is given, the tiles of each group are kept contiguous. The
 #' tiles are first allocated as above, then tiles that are cut off from the
@@ -17,43 +22,73 @@
 #' group are optimally allocated to that group's tiles. This guarantee of
 #' contiguity comes at the cost of the no-swap guarantee between groups.
 #'
-#' @param object An sf object or geometry that was used to be tiled.
-#' @param tile A vector of tile geometries with one tile per row of `object`,
-#'   such as those produced by [hex_grid()].
-#' @param group Optionally, a column of `object` (unquoted) that groups its
-#'   rows (e.g. states). The tiles of each group will be contiguous.
+#' @param object An sf object, or a geometry column (sfc), of regions. It is
+#'   transformed to the coordinate reference system of `tile`, so the regions
+#'   are allocated in the plane the tiles were made in.
+#' @param tile A geometry column (sfc) or sf object of tiles, with one tile
+#'   for each region of `object` and in a projected coordinate reference
+#'   system, such as those made by [hex_grid()].
+#' @param group Optionally, the group of each region (e.g. states), as a column
+#'   of `object` given unquoted (`group = state`) or as a string
+#'   (`group = "state"`), or as a vector with one value for each region. The
+#'   tiles of each group are kept contiguous.
 #'
 #' @return
-#' `object` with its geometry replaced by the allocated tiles.
+#' For an sf object, `object` with its geometry replaced by the allocated
+#' tiles, keeping all of its other columns and the order of its rows. For a
+#' geometry column, a geometry column of the allocated tiles in the same
+#' order. The tiles are in their own coordinate reference system.
+#'
+#' @seealso [hex_grid()] to make the tiles, and [hexmap()], which does both:
+#'   `hexmap(x)` is the same as `hex_allocate(x, hex_grid(x))`.
 #'
 #' @examples
-#' library(ozmaps)
 #' library(sf)
-#' australia <- st_transform(abs_ste, 3577)
-#' australia <- australia[australia$NAME != "Other Territories", ]
-#' grid <- hex_grid(australia, n_tiles = 8)
-#' hexes <- tile_allocate(australia, grid)
+#' election <- st_transform(aus_election_2025, 3577)
+#' grid <- hex_grid(election)
+#' election_hex <- hex_allocate(election, grid, group = state)
 #'
+#' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
 #' library(ggplot2)
 #' ggplot() +
-#'   geom_sf(data = australia) +
-#'   geom_sf(data = hexes, aes(fill = NAME), alpha = 0.5)
+#'   geom_sf(data = election) +
+#'   geom_sf(data = election_hex, aes(fill = state), alpha = 0.5)
 #'
-#' @importFrom sf st_geometry st_geometry<- st_point_on_surface
+#' @importFrom sf st_crs st_geometry st_transform
 #' @export
-tile_allocate <- function(object, tile, group = NULL) {
-  group <- eval(substitute(group), attribute_data(object), parent.frame())
+hex_allocate <- function(object, tile, group = NULL) {
+  check_object(object)
+  group <- eval_group(substitute(group), object, parent.frame())
+  if (!inherits(tile, c("sf", "sfc"))) {
+    stop("`tile` must be a geometry column (sfc) or an sf object.", call. = FALSE)
+  }
   tile <- st_geometry(tile)
+  check_projected(tile, "tile")
   if (length(tile) != NROW(object)) {
-    stop("`tile` must contain exactly one geometry for each row of `object`.",
+    stop("`tile` must contain exactly one geometry for each region of `object`.",
          call. = FALSE)
   }
-  check_group(group, object)
+  check_has_crs(object)
   check_not_empty(object)
+  if (st_crs(object) != st_crs(tile)) object <- st_transform(object, st_crs(tile))
+  set_geometry(object, tile[allocate_regions(st_geometry(object), tile, group)])
+}
 
-  point <- st_point_on_surface(st_geometry(object))
-  st_geometry(object) <- tile[allocate_tiles(point, tile, group)]
-  object
+# Returns the index of the tile allocated to each region, keeping regions on
+# the island of tiles nearest them when every island has a tile for each of
+# its regions
+#' @importFrom sf st_area st_centroid st_nearest_feature st_point_on_surface
+allocate_regions <- function(geometry, tile, group = NULL) {
+  point <- st_point_on_surface(geometry)
+  cellsize <- sqrt(2 * stats::median(as.numeric(st_area(tile))) / sqrt(3))
+  tile_island <- connected_components(hex_adjacency(st_centroid(tile), cellsize))
+  region_island <- tile_island[st_nearest_feature(point, tile)]
+  n <- max(tile_island)
+  if (!identical(tabulate(region_island, n), tabulate(tile_island, n))) {
+    region_island <- tile_island <- NULL
+  }
+  if (is.null(region_island)) return(allocate_tiles(point, tile, group))
+  allocate_tiles(point, tile, group, region_island, tile_island)
 }
 
 # Returns the index of the tile allocated to each region, given a point for
@@ -213,8 +248,29 @@ attribute_data <- function(object) {
   if (inherits(object, "sf")) st_drop_geometry(object) else NULL
 }
 
+# Evaluates the group argument as a column of object or in env, accepting
+# a string naming a column, and checks it
+eval_group <- function(expr, object, env) {
+  data <- attribute_data(object)
+  group <- eval(expr, data, env)
+  if (is.character(group) && length(group) == 1 && NROW(object) != 1 &&
+      group %in% names(data)) {
+    group <- data[[group]]
+  }
+  check_group(group, object)
+  group
+}
+
 check_group <- function(group, object) {
-  if (!is.null(group) && length(group) != NROW(object)) {
-    stop("`group` must have one value for each row of `object`.", call. = FALSE)
+  if (is.null(group)) return()
+  if (length(group) != NROW(object)) {
+    stop("`group` must have one value for each region of `object`, such as a ",
+         "column of `object` given unquoted (e.g. `group = state`).", call. = FALSE)
+  }
+  if (anyNA(group)) {
+    row <- which(is.na(group))
+    stop("`group` must not contain missing values (in rows ",
+         paste(row[seq_len(min(5, length(row)))], collapse = ", "),
+         if (length(row) > 5) ", ...", ").", call. = FALSE)
   }
 }

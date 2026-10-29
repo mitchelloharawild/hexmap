@@ -27,7 +27,7 @@ test_that("hex_grid() tiles distant islands separately", {
   expect_true(all(lengths(sf::st_intersects(grid, islands)) == 1))
 })
 
-test_that("tile_allocate() assigns each region a unique tile", {
+test_that("hexmap() assigns each region a unique tile", {
   hex <- hexmap(ced)
   expect_s3_class(hex, "sf")
   expect_equal(nrow(hex), nrow(ced))
@@ -35,8 +35,8 @@ test_that("tile_allocate() assigns each region a unique tile", {
   expect_length(unique(sf::st_geometry(hex)), nrow(ced))
 })
 
-test_that("tile_allocate() never swaps the relative position of two regions", {
-  hex <- tile_allocate(ced, hex_grid(ced, n_tiles = nrow(ced)))
+test_that("hex_allocate() never swaps the relative position of two regions", {
+  hex <- hex_allocate(ced, hex_grid(ced, island_gap = Inf))
   from <- sf::st_coordinates(sf::st_point_on_surface(sf::st_geometry(ced)))
   to <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(hex)))
   inner <- outer(from[, 1], from[, 1], "-") * outer(to[, 1], to[, 1], "-") +
@@ -62,8 +62,8 @@ centre_of <- function(x) {
   apply(xy, 2, function(v) tapply(v, x$state, mean))
 }
 
-layouts <- list(layout_hierarchy(), layout_repair(layout_diffusion()), layout_diffusion(alpha = 0),
-                layout_diffusion(alpha = 1), layout_compact(),
+layouts <- list(layout_hierarchy(), layout_repair(layout_diffusion()), layout_diffusion(cartogram = 0),
+                layout_diffusion(cartogram = 1), layout_compact(),
                 layout_repair(layout_compact()), layout_slice())
 
 # The pairs of states whose tiles touch
@@ -136,7 +136,7 @@ test_that("border keeps regions on the borders between states", {
 })
 
 test_that("the diffusion layout keeps the outline of the map without warping", {
-  hex <- hexmap(ced, group = state, group_layout = layout_diffusion(alpha = 0),
+  hex <- hexmap(ced, group = state, group_layout = layout_diffusion(cartogram = 0),
                 group_gap = 0)
   expect_setequal(sf::st_geometry(hex), sf::st_geometry(hexmap(ced)))
   # Warping moves the outline
@@ -227,9 +227,8 @@ test_that("tree sets the cuts of the slice layout", {
   expect_lte(max(x[west]), min(x[east]))
 })
 
-test_that("tile_allocate() keeps the tiles of each group contiguous", {
-  hex <- tile_allocate(ced, hex_grid(ced, n_tiles = nrow(ced), island_gap = Inf),
-                       group = state)
+test_that("hex_allocate() keeps the tiles of each group contiguous", {
+  hex <- hex_allocate(ced, hex_grid(ced, island_gap = Inf), group = state)
   expect_true(all(group_pieces(hex, hex$state) == 1))
 })
 
@@ -252,8 +251,8 @@ test_that("hexmap() separates groups with a gap", {
 test_that("inputs are validated", {
   no_crs <- sf::st_set_crs(ced, NA)
   expect_error(hexmap(no_crs), "projected")
-  expect_error(tile_allocate(ced, hex_grid(ced, n_tiles = 10)), "exactly one")
-  expect_error(hexmap(ced, group = state[1:3]), "one value for each row")
+  expect_error(hex_allocate(ced, hex_grid(ced, n_tiles = 10)), "exactly one")
+  expect_error(hexmap(ced, group = state[1:3]), "one value for each region")
   empty <- ced[1:3, ]
   sf::st_geometry(empty)[2] <- sf::st_polygon()
   expect_error(hexmap(empty), "empty")
@@ -269,8 +268,8 @@ test_that("inputs are validated", {
   expect_error(slice(list(unique(ced$state), "X")), "unknown groups: X")
   expect_error(slice(list("WA", "NT")), "missing groups")
   expect_error(slice(list(unique(ced$state), "WA")), "more than once: WA")
-  expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
-  expect_error(layout_hierarchy(blend = 2), "between 0 and 1")
+  expect_error(layout_diffusion(cartogram = 2), "between 0 and 1")
+  expect_error(layout_hierarchy(shape = 2), "between 0 and 1")
   expect_error(layout_repair(layout_compact(), border = -1), "`border`")
   expect_error(layout_diffusion(proximity = -1), "`proximity`")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")
@@ -318,4 +317,100 @@ test_that("longlat input defaults to an equal-area CRS centred on the data", {
   expect_message(hex <- hexmap(fiji), "+lon_0=", fixed = TRUE)
   lon_0 <- as.numeric(sub(".*\\+lon_0=(\\S+).*", "\\1", sf::st_crs(hex)$proj4string))
   expect_gt(abs(lon_0), 179)
+})
+
+test_that("hexmap() is hex_allocate() of hex_grid() without groups", {
+  expect_equal(hexmap(ced), hex_allocate(ced, hex_grid(ced)))
+  expect_equal(hexmap(ced, island_gap = Inf),
+               hex_allocate(ced, hex_grid(ced, island_gap = Inf)))
+})
+
+test_that("hex_grid() shares hexagons between landmasses by their regions", {
+  grid <- hex_grid(ced)
+  expect_length(grid, nrow(ced))
+  # Tasmania and the mainland get one hexagon for each of their regions
+  island <- connected_components(hex_adjacency(sf::st_centroid(grid), cellsize))
+  expect_equal(sort(tabulate(island)), c(sum(ced$state == "TAS"), sum(ced$state != "TAS")))
+  # A single geometry is shared by area
+  expect_length(hex_grid(sf::st_union(ced), n_tiles = 40), 40)
+})
+
+test_that("hex_grid() and hex_allocate() handle coordinate reference systems", {
+  expect_message(grid <- hex_grid(ced_ll), "+proj=laea", fixed = TRUE)
+  expect_false(sf::st_is_longlat(grid))
+  expect_equal(sf::st_crs(hex_grid(ced_ll, crs = 3577)), sf::st_crs(ced))
+
+  # Regions are transformed to the CRS of the tiles, without warnings
+  expect_no_warning(hex <- hex_allocate(ced_ll, hex_grid(ced)))
+  expect_equal(sf::st_crs(hex), sf::st_crs(ced))
+  expect_equal(hex, hex_allocate(ced, hex_grid(ced)))
+
+  expect_error(hex_allocate(ced, sf::st_transform(hex_grid(ced), 4326)),
+               "`tile` must use a projected")
+  expect_error(hex_allocate(sf::st_set_crs(ced, NA), hex_grid(ced)),
+               "must have a coordinate reference system")
+  expect_error(hexmap(sf::st_set_crs(ced, NA), crs = 3577),
+               "must have a coordinate reference system")
+})
+
+test_that("hexmap() keeps the columns and order of rows", {
+  shuffled <- ced[rev(seq_len(nrow(ced))), ]
+  hex <- hexmap(shuffled, group = state, group_layout = layout_compact())
+  expect_named(hex, names(shuffled))
+  expect_equal(sf::st_drop_geometry(hex), sf::st_drop_geometry(shuffled))
+})
+
+test_that("hexmap() and hex_allocate() accept a geometry column", {
+  geometry <- sf::st_geometry(ced)
+  hex <- hexmap(geometry)
+  expect_s3_class(hex, "sfc")
+  expect_equal(hex, sf::st_geometry(hexmap(ced)))
+
+  group <- ced$state
+  grouped <- hexmap(geometry, group = group, group_layout = layout_compact())
+  expect_equal(grouped, sf::st_geometry(
+    hexmap(ced, group = state, group_layout = layout_compact())
+  ))
+  expect_equal(hex_allocate(geometry, hex_grid(ced)), hex)
+
+  skip_if_not_installed("dplyr")
+  with_hex <- dplyr::mutate(ced, hex = hexmap(geometry, group = state,
+                                              group_layout = layout_compact()))
+  expect_equal(with_hex$hex, grouped)
+  expect_equal(with_hex$geometry, geometry)
+})
+
+test_that("group can be a column name", {
+  expect_equal(
+    hexmap(ced, group = "state", group_layout = layout_compact()),
+    hexmap(ced, group = state, group_layout = layout_compact())
+  )
+  expect_equal(
+    hex_allocate(ced, hex_grid(ced, island_gap = Inf), group = "state"),
+    hex_allocate(ced, hex_grid(ced, island_gap = Inf), group = state)
+  )
+  # Strings that aren't columns, or with a geometry column, hint at the column
+  expect_error(hexmap(ced, group = "states"), "unquoted")
+  expect_error(hexmap(sf::st_geometry(ced), group = "state"), "unquoted")
+})
+
+test_that("more inputs are validated", {
+  missing_group <- ced
+  missing_group$state[c(2, 5)] <- NA
+  expect_error(hexmap(missing_group, group = state), "missing values \\(in rows 2, 5\\)")
+  expect_error(hex_allocate(missing_group, hex_grid(ced), group = state), "missing values")
+
+  expect_error(hexmap(ced[0, ]), "at least one region")
+  expect_error(hexmap(data.frame(x = 1)), "sf object or a geometry column")
+  expect_error(hex_allocate(ced, data.frame(x = 1)), "`tile` must be")
+  expect_error(hexmap(ced, island_gap = "a"), "`island_gap` must be a number")
+  expect_error(hexmap(ced, island_gap = -1), "`island_gap` must be a number")
+  expect_error(hexmap(ced, group = state, group_gap = -0.1), "`group_gap` must be a number")
+  expect_error(hex_grid(ced, n_tiles = 0), "`n_tiles` must be a number")
+
+  # Group settings without a group are ignored, with a warning
+  expect_warning(hexmap(ced, group_gap = 0.2), "`group_gap` is ignored")
+  expect_warning(hexmap(ced, group_layout = layout_compact(), group_gap = 0),
+                 "`group_layout` and `group_gap` are ignored")
+  expect_no_warning(hexmap(ced))
 })
