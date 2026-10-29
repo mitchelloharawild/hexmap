@@ -62,12 +62,13 @@ tile_allocate <- function(object, tile, group = NULL) {
 #
 # Tiles are split between groups by the regions' optimal allocation, or when
 # group_shape (the shape of each region's group) is given, by which group's
-# shape is nearest so that the borders between groups are kept.
+# shape is nearest so that the borders between groups are kept, and with
+# weight proximity, which group's regions are nearest.
 #' @importFrom sf st_area st_centroid st_coordinates
 allocate_tiles <- function(point, tile, group = NULL,
                            region_block = rep(1L, length(point)),
                            tile_block = rep(1L, length(tile)),
-                           group_shape = NULL) {
+                           group_shape = NULL, proximity = 0) {
   from <- st_coordinates(point)
   centre <- st_centroid(tile)
   to <- st_coordinates(centre)
@@ -86,7 +87,8 @@ allocate_tiles <- function(point, tile, group = NULL,
     adjacent <- hex_adjacency(centre[j], cellsize)
     tile_group <- group[i][match(j, index[i])]
     if (!is.null(group_shape)) {
-      by_shape <- nearest_shape_groups(group[i], group_shape[i], centre[j])
+      by_shape <- nearest_shape_groups(group[i], group_shape[i], centre[j],
+                                       from[i, , drop = FALSE], proximity)
       by_shape <- contiguous_groups(by_shape, adjacent)
       if (attr(by_shape, "contiguous")) tile_group <- by_shape
     }
@@ -109,17 +111,31 @@ allocate_tiles <- function(point, tile, group = NULL,
 
 # Minimises the total squared distance between points in from and to
 solve_assignment <- function(from, to) {
-  cost <- outer(from[, 1], to[, 1], "-")^2 + outer(from[, 2], to[, 2], "-")^2
-  as.integer(clue::solve_LSAP(cost))
+  as.integer(clue::solve_LSAP(squared_distance(from, to)))
+}
+
+squared_distance <- function(from, to) {
+  outer(from[, 1], to[, 1], "-")^2 + outer(from[, 2], to[, 2], "-")^2
 }
 
 # Splits tiles between groups, with one tile for each region, minimising the
-# total squared distance between tiles and the shape of their group
-#' @importFrom sf st_distance
-nearest_shape_groups <- function(group, group_shape, centre) {
+# total squared distance between tiles and the shape of their group, plus
+# proximity times the squared distance to the nearest point of the group. The
+# shapes alone don't say which of a group's tiles to give up when it has more
+# area than regions, so it can give up the tiles near its regions and take
+# tiles far from them.
+#' @importFrom sf st_coordinates st_distance
+nearest_shape_groups <- function(group, group_shape, centre, point = NULL, proximity = 0) {
   groups <- unique(group)
   shape <- group_shape[match(groups, group)]
   cost <- matrix(as.numeric(st_distance(centre, shape))^2, ncol = length(groups))
+  if (proximity > 0) {
+    to <- st_coordinates(centre)
+    for (k in seq_along(groups)) {
+      near <- squared_distance(to, point[group == groups[k], , drop = FALSE])
+      cost[, k] <- cost[, k] + proximity * apply(near, 1, min)
+    }
+  }
   column <- match(group, groups)
   group[as.integer(clue::solve_LSAP(cost[, column, drop = FALSE]))]
 }

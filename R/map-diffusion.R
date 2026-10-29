@@ -8,7 +8,7 @@
 # Returns the tile of each region.
 #' @importFrom sf st_area st_make_valid st_point_on_surface st_union
 diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
-                            resolution = 256, passes = 3) {
+                            resolution = 256, proximity = 0.1, passes = 3) {
   id <- as.integer(factor(group, exclude = NULL))
   shape <- do.call(c, lapply(split(geometry, id), st_union))
   shape <- simplify_polygons(shape, cellsize / 10)
@@ -44,7 +44,7 @@ diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
   n <- tabulate(land$region, nbins = length(land_shape))
   grid <- landmass_grid(land_shape, n, cellsize)
   index <- allocate_tiles(point, grid$tile, group, land$region, grid$landmass,
-                          warped[id])
+                          warped[id], proximity)
   grid$tile[index]
 }
 

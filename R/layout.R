@@ -50,6 +50,13 @@
 #' @param resolution The width of the grid used to find the diffusion
 #'   cartogram, in cells. Larger grids are more accurate for small groups but
 #'   slower.
+#' @param proximity How much to keep each group's hexagons near its regions.
+#'   Unless `alpha = 1`, groups don't cover the area their regions need, so
+#'   hexagons pass from group to group. Each hexagon is given to groups by its
+#'   squared distance to the group's warped shape plus `proximity` times its
+#'   squared distance to the group's nearest region, so that a group gives up
+#'   the hexagons far from its regions (e.g. outback rather than near its
+#'   cities). With 0, only the shapes are used.
 #' @param layout A layout function to repair, such as `layout_compact()`.
 #' @param iterations The number of swaps to try, per hexagon.
 #' @param anchor A data frame with columns `group`, `x` and `y` giving
@@ -100,12 +107,13 @@ NULL
 
 #' @rdname layouts
 #' @export
-layout_diffusion <- function(alpha = 0.75, resolution = 256) {
+layout_diffusion <- function(alpha = 0.75, resolution = 256, proximity = 0.1) {
   check_number(alpha, 0, 1)
   check_number(resolution, 16, Inf)
+  check_number(proximity, 0, Inf)
   resolution <- 2 * round(resolution / 2)
   function(geometry, group, land, cellsize) {
-    diffusion_tiles(geometry, group, land, cellsize, alpha, resolution)
+    diffusion_tiles(geometry, group, land, cellsize, alpha, resolution, proximity)
   }
 }
 

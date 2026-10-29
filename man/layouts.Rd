@@ -8,7 +8,7 @@
 \alias{layout_repair}
 \title{Layouts for groups of hexagons}
 \usage{
-layout_diffusion(alpha = 0.75, resolution = 256)
+layout_diffusion(alpha = 0.75, resolution = 256, proximity = 0.1)
 
 layout_compact(anchor = NULL)
 
@@ -25,6 +25,14 @@ area of each group is warped to \code{area^(1 - alpha) * size^alpha}, where
 \item{resolution}{The width of the grid used to find the diffusion
 cartogram, in cells. Larger grids are more accurate for small groups but
 slower.}
+
+\item{proximity}{How much to keep each group's hexagons near its regions.
+Unless \code{alpha = 1}, groups don't cover the area their regions need, so
+hexagons pass from group to group. Each hexagon is given to groups by its
+squared distance to the group's warped shape plus \code{proximity} times its
+squared distance to the group's nearest region, so that a group gives up
+the hexagons far from its regions (e.g. outback rather than near its
+cities). With 0, only the shapes are used.}
 
 \item{anchor}{A data frame with columns \code{group}, \code{x} and \code{y} giving
 positions (in the coordinates of the map) to use in place of the

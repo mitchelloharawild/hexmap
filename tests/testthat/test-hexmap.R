@@ -229,6 +229,7 @@ test_that("inputs are validated", {
   expect_error(slice(list("WA", "NT")), "missing groups")
   expect_error(slice(list(unique(ced$state), "WA")), "more than once: WA")
   expect_error(layout_diffusion(alpha = 2), "between 0 and 1")
+  expect_error(layout_diffusion(proximity = -1), "`proximity`")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")
   expect_error(hexmap(ced, group = state, group_layout = "compact"), "layout function")
 })
