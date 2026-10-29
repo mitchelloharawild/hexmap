@@ -12,9 +12,9 @@ Converts a map of regions, as an 'sf' object, into a map of equally sized hexago
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://numbats.github.io/hexmap/}
-  \item \url{https://github.com/numbats/hexmap}
-  \item Report bugs at \url{https://github.com/numbats/hexmap/issues}
+  \item \url{https://pkg.mitchelloharawild.com/hexmap/}
+  \item \url{https://github.com/mitchelloharawild/hexmap}
+  \item Report bugs at \url{https://github.com/mitchelloharawild/hexmap/issues}
 }
 
 }

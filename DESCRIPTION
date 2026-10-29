@@ -30,8 +30,8 @@ Imports:
     clue,
     sf,
     stats
-URL: https://numbats.github.io/hexmap/, https://github.com/numbats/hexmap
-BugReports: https://github.com/numbats/hexmap/issues
+URL: https://pkg.mitchelloharawild.com/hexmap/, https://github.com/mitchelloharawild/hexmap
+BugReports: https://github.com/mitchelloharawild/hexmap/issues
 Depends:
     R (>= 4.1)
 LazyData: true
