@@ -5,6 +5,8 @@
 \alias{hexmap-package}
 \title{hexmap: Convert a map into a hex map}
 \description{
+\if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
+
 This package takes an sf map object and converts into a hex tile map. This aids data visualisation of maps by making small geographical regions to be equally visible as large geographical regions.
 }
 \seealso{
