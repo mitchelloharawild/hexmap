@@ -2,21 +2,24 @@
 
 ## Authors
 
-- **Emi Tanaka**. Author, maintainer.
-  [](https://orcid.org/0000-0002-1455-259X)
+- **Mitchell O'Hara-Wild**. Author, maintainer.
+  [](https://orcid.org/0000-0001-6729-7695)
+
+- **Emi Tanaka**. Author. [](https://orcid.org/0000-0002-1455-259X)
 
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/emitanaka/hexmap/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/numbats/hexmap/blob/main/DESCRIPTION)
 
-Tanaka E (2026). *hexmap: Convert a map into a hex map*. R package
-version 0.0.0.9000, <https://github.com/emitanaka/hexmap>.
+O'Hara-Wild M, Tanaka E (2026). *hexmap: Convert a Map into a Hexagon
+Tile Map*. R package version 0.0.0.9000,
+<https://numbats.github.io/hexmap/>.
 
     @Manual{,
-      title = {hexmap: Convert a map into a hex map},
-      author = {Emi Tanaka},
+      title = {hexmap: Convert a Map into a Hexagon Tile Map},
+      author = {Mitchell O'Hara-Wild and Emi Tanaka},
       year = {2026},
       note = {R package version 0.0.0.9000},
-      url = {https://github.com/emitanaka/hexmap},
+      url = {https://numbats.github.io/hexmap/},
     }

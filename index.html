@@ -4,14 +4,15 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Convert a map into a hex map • hexmap</title>
+<title>Convert a Map into a Hexagon Tile Map • hexmap</title>
 <script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
-<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Convert a map into a hex map">
-<meta name="description" content="This package takes an sf map object and converts into a hex tile map. This aids data visualisation of maps by making small geographical regions to be equally visible as large geographical regions.">
-<meta property="og:description" content="This package takes an sf map object and converts into a hex tile map. This aids data visualisation of maps by making small geographical regions to be equally visible as large geographical regions.">
+<script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="Convert a Map into a Hexagon Tile Map">
+<meta name="description" content="Converts a map of regions, as an sf object, into a map of equally sized hexagons with one hexagon for each region. Each region is allocated the hexagon that minimises the total squared displacement of all regions, so regions keep their relative positions, while distant islands are tiled separately. Groups of regions (such as states) can be kept together using one of several layouts, including a diffusion cartogram (Gastner and Newman, 2004) &lt;doi:10.1073/pnas.0400280101&gt; and spatially ordered treemaps (Wood and Dykes, 2008) &lt;doi:10.1109/TVCG.2008.165&gt;. This makes small but important regions as visible as large, sparsely populated ones.">
+<meta property="og:description" content="Converts a map of regions, as an sf object, into a map of equally sized hexagons with one hexagon for each region. Each region is allocated the hexagon that minimises the total squared displacement of all regions, so regions keep their relative positions, while distant islands are tiled separately. Groups of regions (such as states) can be kept together using one of several layouts, including a diffusion cartogram (Gastner and Newman, 2004) &lt;doi:10.1073/pnas.0400280101&gt; and spatially ordered treemaps (Wood and Dykes, 2008) &lt;doi:10.1109/TVCG.2008.165&gt;. This makes small but important regions as visible as large, sparsely populated ones.">
+<meta property="og:image" content="https://numbats.github.io/hexmap/logo.png">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -34,7 +35,8 @@
 <li class="nav-item dropdown">
   <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
   <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
-<li><a class="dropdown-item" href="articles/calculate-grid.html">Understanding the grid structure</a></li>
+<li><a class="dropdown-item" href="articles/layouts.html">Choosing a layout for groups</a></li>
+    <li><a class="dropdown-item" href="articles/projections.html">Hexagon maps and map projections</a></li>
   </ul>
 </li>
       </ul>
@@ -42,7 +44,7 @@
 <li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json">
 </form></li>
-<li class="nav-item"><a class="external-link nav-link" href="https://github.com/emitanaka/hexmap/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/numbats/hexmap/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul>
 </div>
 
@@ -51,11 +53,14 @@
 </nav><div class="container template-home">
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
-<div class="page-header"><h1 id="hexmap">hexmap<a class="anchor" aria-label="anchor" href="#hexmap"></a>
-</h1></div>
+<div class="page-header">
+<img src="logo.png" class="logo" alt=""><h1 id="hexmap-">hexmap 
+<a class="anchor" aria-label="anchor" href="#hexmap-"></a>
+</h1>
+</div>
 <!-- badges: start -->
 
-<p>The hexmap R package aims to automate the conversion of geospatial polygons into hexagonal grids. This conversion allows users to better visualise statistical values associated with each geospatial region.</p>
+<p>hexmap converts a map of regions into a map of equally sized hexagons, one for each region. Every region gets the same amount of ink, so small but important regions (such as inner-city electorates) are as visible as large, sparsely populated ones, while each region stays close to where it is on the map.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -65,87 +70,78 @@
 <span><span class="fu">remotes</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">"numbats/hexmap"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="method">Method<a class="anchor" aria-label="anchor" href="#method"></a>
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
 </h2>
-<ol style="list-style-type: decimal">
-<li>Make a cartogram so that each region has an approximately equal area (optional)</li>
-<li>Create a hexagonal grid based on this cartogram or other geospatial object</li>
-<li>Assign the region to the “closest” hexagon</li>
-</ol>
+<p><code><a href="reference/hexmap.html">hexmap()</a></code> takes an <code>sf</code> object and returns it with each region’s geometry replaced by a hexagon:</p>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://numbats.github.io/hexmap/">hexmap</a></span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">electorates</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">electorates</span>, group <span class="op">=</span> <span class="va">state</span><span class="op">)</span></span></code></pre></div>
+<ul>
+<li><p><strong>Optimal placement.</strong> Each region gets the hexagon that minimises the total squared distance between regions and their hexagons, so the relative positions of regions are kept.</p></li>
+<li><p><strong>Groups.</strong> With <code>group</code>, the hexagons of each group (such as a state) are kept together, separated by a small gap (<code>group_gap</code>), and touch the same neighbouring groups as on the map.</p></li>
+<li><p><strong>Group layouts.</strong> <code>group_layout</code> sets how groups are arranged: groups that keep their own shapes and positions (<code><a href="reference/layouts.html">layout_hierarchy()</a></code>, the default), a cartogram that keeps more of the overall outline (<code><a href="reference/layouts.html">layout_diffusion()</a></code>), compact blocks (<code><a href="reference/layouts.html">layout_compact()</a></code>), or a spatial treemap (<code><a href="reference/layouts.html">layout_slice()</a></code>). <code><a href="reference/layouts.html">layout_repair()</a></code> fixes the borders between groups of any layout. See <code><a href="articles/layouts.html">vignette("layouts")</a></code> for how they compare.</p></li>
+<li><p><strong>Islands.</strong> Distant landmasses, such as Tasmania, are tiled separately and kept apart from the mainland (<code>island_gap</code>).</p></li>
+<li><p><strong>Projections.</strong> Hexagons are regular in the projection they are made in (<code>crs</code>), which defaults to an equal-area projection for maps in longitude and latitude. See <code><a href="articles/projections.html">vignette("projections")</a></code>.</p></li>
+<li>
+<p><strong>Keeps your data.</strong> <code><a href="reference/hexmap.html">hexmap()</a></code> returns the map with each region’s geometry replaced by its hexagon, keeping every other column and the order of the rows, so the hexagons are easy to join to or compare with the regions. Given a geometry column instead, it returns a geometry column of hexagons, so it can be used in <code><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">dplyr::mutate()</a></code> to keep both:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">electorates</span> <span class="op">|&gt;</span></span>
+<span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>hex <span class="op">=</span> <span class="fu"><a href="reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">geometry</span>, group <span class="op">=</span> <span class="va">state</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+</li>
+</ul>
+<p>Without groups, <code><a href="reference/hexmap.html">hexmap()</a></code> works in two steps that are also available on their own: <code><a href="reference/hex_grid.html">hex_grid()</a></code> tiles a map with hexagons, and <code><a href="reference/hex_allocate.html">hex_allocate()</a></code> allocates them to regions, so <code>hexmap(x)</code> is the same as <code>hex_allocate(x, hex_grid(x))</code>. With groups, the hexagons are instead made and allocated by the layout.</p>
 </div>
 <div class="section level2">
-<h2 id="example-australian-federal-election-2022">Example: Australian federal election 2022<a class="anchor" aria-label="anchor" href="#example-australian-federal-election-2022"></a>
+<h2 id="example-the-2025-australian-federal-election">Example: the 2025 Australian federal election<a class="anchor" aria-label="anchor" href="#example-the-2025-australian-federal-election"></a>
 </h2>
-<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/emitanaka/hexmap" class="external-link">hexmap</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-spatial.github.io/sf/" class="external-link">sf</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sjewo/cartogram" class="external-link">cartogram</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
-<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://dplyr.tidyverse.org" class="external-link">dplyr</a></span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span></span>
-<span><span class="va">winner_map</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="va">party_colors</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"ALP"</span> <span class="op">=</span> <span class="st">"red3"</span>, <span class="st">"LNP"</span> <span class="op">=</span> <span class="st">"blue3"</span>, <span class="st">"GRN"</span> <span class="op">=</span> <span class="st">"seagreen"</span>, <span class="st">"Other"</span> <span class="op">=</span> <span class="st">"yellow2"</span><span class="op">)</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsf.html" class="external-link">geom_sf</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="va">winner</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_void</a></span><span class="op">(</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/scale_manual.html" class="external-link">scale_fill_manual</a></span><span class="op">(</span>values <span class="op">=</span> <span class="va">party_colors</span><span class="op">)</span> </span>
-<span><span class="op">}</span></span>
-<span></span>
-<span><span class="va">state_map</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">{</span></span>
-<span>  <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">data</span><span class="op">)</span> <span class="op">+</span> </span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggsf.html" class="external-link">geom_sf</a></span><span class="op">(</span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>fill <span class="op">=</span> <span class="va">state</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
-<span>    <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggtheme.html" class="external-link">theme_void</a></span><span class="op">(</span><span class="op">)</span> </span>
-<span><span class="op">}</span></span></code></pre></div>
-<p>The data <code>aec2022</code> in hexmap is an <code>sf</code> object with a simplified Australian federal electoral boundary and the corresponding party that won the 2022 Australian federal election for that electoral division.</p>
-<div class="section level3">
-<h3 id="choropleth-map">Choropleth map<a class="anchor" aria-label="anchor" href="#choropleth-map"></a>
-</h3>
-<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">winner_map</span><span class="op">(</span><span class="va">aec2022</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-plot-choropleth-1.png" width="100%"></p>
-</div>
-<div class="section level3">
-<h3 id="cartogram">Cartogram<a class="anchor" aria-label="anchor" href="#cartogram"></a>
-</h3>
+<p>Labor won 94 of the 150 seats at the 2025 Australian federal election. On a geographic map the result looks like a Coalition win, as the large rural divisions hide Labor’s many small city seats. A cartogram with equal areas for each division shows the number of seats, but distorts the map beyond recognition. A hexagon grid made with <a href="https://github.com/jbaileyh/geogrid" class="external-link">geogrid</a> gives each division the same space, but doesn’t keep states together. hexmap keeps each state together, in its place and with its neighbours.</p>
+<p><img src="reference/figures/README-animation-.gif" alt="" width="100%"></p>
+<p>hexmap includes the results as <code>aus_election_2025</code>: the simplified boundaries of each division from the <a href="https://www.abs.gov.au/" class="external-link">Australian Bureau of Statistics</a>, with its state and the party that won it from the <a href="https://www.aec.gov.au/" class="external-link">Australian Electoral Commission</a>, licensed under CC BY 4.0. The maps below are made in the Australian Albers equal-area projection, with the minor parties combined:</p>
 <div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">aec2022carto</span> <span class="op">&lt;-</span> <span class="va">aec2022</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_transform.html" class="external-link">st_transform</a></span><span class="op">(</span>crs <span class="op">=</span> <span class="st">"+init=epsg:3112"</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>weight <span class="op">=</span> <span class="fl">1</span><span class="op">)</span> <span class="op"><a href="reference/pipe.html">%&gt;%</a></span> </span>
-<span>  <span class="fu">cartogram_cont</span><span class="op">(</span><span class="st">"weight"</span>, itermax <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://r-spatial.github.io/sf/" class="external-link">sf</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://numbats.github.io/hexmap/">hexmap</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">winner_map</span><span class="op">(</span><span class="va">aec2022carto</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-plot-cartogram-1.png" width="100%"></p>
+<span><span class="va">party</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>ALP <span class="op">=</span> <span class="st">"Labor"</span>, LP <span class="op">=</span> <span class="st">"Coalition"</span>, LNP <span class="op">=</span> <span class="st">"Coalition"</span>, NP <span class="op">=</span> <span class="st">"Coalition"</span>,</span>
+<span>           GRN <span class="op">=</span> <span class="st">"Greens"</span><span class="op">)</span></span>
+<span><span class="va">election</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://r-spatial.github.io/sf/reference/st_transform.html" class="external-link">st_transform</a></span><span class="op">(</span><span class="va">aus_election_2025</span>, <span class="fl">3577</span><span class="op">)</span></span>
+<span><span class="va">election</span><span class="op">$</span><span class="va">party</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">election</span><span class="op">$</span><span class="va">party</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">party</span><span class="op">)</span>, <span class="va">party</span><span class="op">[</span><span class="va">election</span><span class="op">$</span><span class="va">party</span><span class="op">]</span>, <span class="st">"Other"</span><span class="op">)</span></span></code></pre></div>
+<p>Each method then gives every division the same area:</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu">state_map</span><span class="op">(</span><span class="va">aec2022carto</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-plot-cartogram-2.png" width="100%"></p>
-</div>
-<div class="section level3">
-<h3 id="geogrid-hexagonal-map">
-<code>geogrid</code> hexagonal map<a class="anchor" aria-label="anchor" href="#geogrid-hexagonal-map"></a>
-</h3>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">hex</span> <span class="op">&lt;-</span> <span class="fu">geogrid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/geogrid/man/calculate_grid.html" class="external-link">calculate_grid</a></span><span class="op">(</span><span class="va">aec2022carto</span>, grid_type <span class="op">=</span> <span class="st">"hexagonal"</span><span class="op">)</span></span>
-<span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">geogrid</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/geogrid/man/assign_polygons.html" class="external-link">assign_polygons</a></span><span class="op">(</span><span class="va">aec2022carto</span>, <span class="va">hex</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/sjewo/cartogram" class="external-link">cartogram</a></span><span class="op">)</span></span>
+<span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/jbaileyh/geogrid" class="external-link">geogrid</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu">state_map</span><span class="op">(</span><span class="va">res</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-plot-geogrid-1.png" width="100%"></p>
-</div>
+<span><span class="co"># Cartogram</span></span>
+<span><span class="va">election</span><span class="op">$</span><span class="va">seats</span> <span class="op">&lt;-</span> <span class="fl">1</span></span>
+<span><span class="va">election_cartogram</span> <span class="op">&lt;-</span> <span class="fu">cartogram_cont</span><span class="op">(</span><span class="va">election</span>, <span class="st">"seats"</span>, itermax <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># geogrid</span></span>
+<span><span class="va">grid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/geogrid/man/calculate_grid.html" class="external-link">calculate_grid</a></span><span class="op">(</span><span class="va">election</span>, grid_type <span class="op">=</span> <span class="st">"hexagonal"</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">election_geogrid</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/geogrid/man/assign_polygons.html" class="external-link">assign_polygons</a></span><span class="op">(</span><span class="va">election</span>, <span class="va">grid</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># hexmap</span></span>
+<span><span class="va">election_hexmap</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/hexmap.html">hexmap</a></span><span class="op">(</span><span class="va">election</span>, group <span class="op">=</span> <span class="va">state</span><span class="op">)</span></span></code></pre></div>
+<p><img src="reference/figures/README-comparison-1.png" alt="" width="100%"></p>
+<p>Colouring the divisions by state shows the difference. geogrid scatters the divisions of each state across the grid, so four of Tasmania’s five seats end up on the mainland. hexmap keeps each state in one piece, touching the same states as on the map.</p>
+<p><img src="reference/figures/README-states-1.png" alt="" width="100%"></p>
+<p>The code for the plots (with ggplot2 and patchwork) is in <a href="README.Rmd"><code>README.Rmd</code></a>.</p>
 </div>
 <div class="section level2">
 <h2 id="related">Related<a class="anchor" aria-label="anchor" href="#related"></a>
 </h2>
 <ul>
 <li>
-<a href="https://github.com/jbaileyh/geogrid" class="external-link"><code>geogrid</code></a> package</li>
+<a href="https://github.com/jbaileyh/geogrid" class="external-link">geogrid</a> allocates regions to a regular grid of hexagons or squares.</li>
+<li>
+<a href="https://github.com/sjewo/cartogram" class="external-link">cartogram</a> distorts regions so their areas are proportional to a variable.</li>
 </ul>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
 <h2 data-toc-skip>Links</h2>
 <ul class="list-unstyled">
-<li><a href="https://github.com/emitanaka/hexmap/" class="external-link">Browse source code</a></li>
-<li><a href="https://github.com/emitanaka/hexmap/issues" class="external-link">Report a bug</a></li>
+<li><a href="https://github.com/numbats/hexmap/" class="external-link">Browse source code</a></li>
+<li><a href="https://github.com/numbats/hexmap/issues" class="external-link">Report a bug</a></li>
 </ul>
 </div>
 
@@ -168,7 +164,8 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>Emi Tanaka <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0002-1455-259X" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Mitchell O'Hara-Wild <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0001-6729-7695" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
+<li>Emi Tanaka <br><small class="roles"> Author </small> <a href="https://orcid.org/0000-0002-1455-259X" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 
@@ -184,7 +181,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Emi Tanaka.</p>
+  <p>Developed by Mitchell O’Hara-Wild, Emi Tanaka.</p>
 </div>
 
 <div class="pkgdown-footer-right">

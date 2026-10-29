@@ -2,5 +2,7 @@
 
 ### All vignettes
 
-- [Understanding the grid
-  structure](https://numbats.github.io/hexmap/articles/calculate-grid.md):
+- [Choosing a layout for
+  groups](https://numbats.github.io/hexmap/articles/layouts.md):
+- [Hexagon maps and map
+  projections](https://numbats.github.io/hexmap/articles/projections.md):

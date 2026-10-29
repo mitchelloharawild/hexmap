@@ -1,19 +1,17 @@
 <urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
 <url><loc>https://numbats.github.io/hexmap/404.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/LICENSE.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/articles/calculate-grid.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/articles/index.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/articles/layouts.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/articles/projections.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/authors.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/index.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/add_hexmap.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/aec2022.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/reference/aus_election_2025.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/reference/hex_allocate.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/reference/hex_grid.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/reference/hexmap-package.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/reference/hexmap.html</loc></url>
 <url><loc>https://numbats.github.io/hexmap/reference/index.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/map_grid.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/map_match.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/pipe.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/tile_allocate.html</loc></url>
-<url><loc>https://numbats.github.io/hexmap/reference/transition_map_data.html</loc></url>
+<url><loc>https://numbats.github.io/hexmap/reference/layouts.html</loc></url>
 </urlset>
 
