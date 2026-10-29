@@ -2,3 +2,18 @@ url: https://numbats.github.io/hexmap/
 template:
   bootstrap: 5
 
+
+reference:
+- title: Hexagon maps
+  desc: Convert a map of regions into a hexagon tile map.
+  contents:
+  - hexmap
+- title: Layouts
+  desc: >
+    Arrange the hexagons, and the hexagons of each group, for the `layout`
+    argument of `hexmap()`.
+  contents:
+  - layouts
+- title: Data
+  contents:
+  - aus_election_2025
