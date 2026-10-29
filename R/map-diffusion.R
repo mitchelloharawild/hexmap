@@ -6,12 +6,12 @@
 # landmasses, and are split between groups along the warped borders.
 #
 # Returns the tile of each region.
-#' @importFrom sf st_area st_make_valid st_point_on_surface st_simplify st_union
+#' @importFrom sf st_area st_make_valid st_point_on_surface st_union
 diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
                             resolution = 256, passes = 3) {
   id <- as.integer(factor(group, exclude = NULL))
   shape <- do.call(c, lapply(split(geometry, id), st_union))
-  shape <- st_simplify(shape, preserveTopology = TRUE, dTolerance = cellsize / 10)
+  shape <- simplify_polygons(shape, cellsize / 10)
   area <- as.numeric(st_area(shape))
   size <- tabulate(id) / length(id) * sum(area)
   target <- area^(1 - alpha) * size^alpha
@@ -36,8 +36,7 @@ diffusion_tiles <- function(geometry, group, land, cellsize, alpha = 0.75,
   # Without warping, the landmasses are tiled as they are
   land_shape <- land$geometry
   if (length(maps)) {
-    land_shape <- st_simplify(land_shape, preserveTopology = TRUE,
-                              dTolerance = cellsize / 10)
+    land_shape <- simplify_polygons(land_shape, cellsize / 10)
     land_shape <- st_make_valid(warp(land_shape))
     cellsize <- hex_cellsize(land_shape, length(geometry))
   }
@@ -149,4 +148,16 @@ map_coordinates <- function(geometry, f) {
     structure(rapply(unclass(x), move, classes = "matrix", how = "replace"),
               class = class(x))
   }), crs = st_crs(geometry))
+}
+
+# Simplifies each polygon separately, as GEOS simplifies the polygons of a
+# multipolygon in an order that can differ between runs (giving different
+# results)
+#' @importFrom sf st_cast st_crs st_make_valid st_sfc st_simplify st_union
+simplify_polygons <- function(geometry, tolerance) {
+  do.call(c, lapply(geometry, function(x) {
+    x <- st_cast(st_sfc(x, crs = st_crs(geometry)), "POLYGON")
+    x <- st_simplify(x, preserveTopology = TRUE, dTolerance = tolerance)
+    st_union(st_make_valid(x))
+  }))
 }

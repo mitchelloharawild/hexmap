@@ -9,7 +9,7 @@
 # their piece's hexagons, nearest to the hexagons they had.
 #
 # Returns the tile of each region.
-#' @importFrom sf st_area st_centroid st_coordinates st_simplify st_union
+#' @importFrom sf st_area st_centroid st_coordinates st_union
 repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * length(tile),
                           weight = c(contact = 20, border = 1, position = 0.3)) {
   piece <- as.integer(interaction(as.integer(factor(group, exclude = NULL)),
@@ -23,7 +23,7 @@ repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * 
 
   # The pieces that share a border on the map
   shape <- do.call(c, lapply(split(geometry, piece), st_union))
-  shape <- st_simplify(shape, preserveTopology = TRUE, dTolerance = cellsize / 10)
+  shape <- simplify_polygons(shape, cellsize / 10)
   first <- match(seq_len(n_piece), piece)
   neighbour <- shared_border(shape, cellsize / 10) > 0 &
     outer(region_land[first], region_land[first], "==")
