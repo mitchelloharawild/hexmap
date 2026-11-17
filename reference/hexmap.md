@@ -8,14 +8,7 @@ layout moves them), so regions keep their relative positions.
 ## Usage
 
 ``` r
-hexmap(
-  object,
-  group = NULL,
-  layout = layout_hierarchy(),
-  island_gap = 0.5,
-  group_gap = 0.1,
-  crs = NULL
-)
+hexmap(object, layout = layout_hierarchy(), island_gap = 0.5, crs = NULL, ...)
 ```
 
 ## Arguments
@@ -25,16 +18,10 @@ hexmap(
   An sf object, or a geometry column (sfc), of regions in a projected or
   longitude/latitude coordinate reference system.
 
-- group:
-
-  Optionally, the group of each region (e.g. states), as a column of
-  `object` given unquoted (`group = state`) or as a string
-  (`group = "state"`), or as a vector with one value for each region.
-
 - layout:
 
-  How the hexagons (and groups) are arranged, as a layout function such
-  as
+  How the hexagons, and the groups of regions, are arranged, as a layout
+  function such as
   [`layout_hierarchy()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
   (the default),
   [`layout_diffusion()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md),
@@ -43,19 +30,13 @@ hexmap(
   [`layout_slice()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md),
   optionally wrapped in
   [`layout_repair()`](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
-  to fix which groups touch.
+  to fix which groups touch. The groups are given to the layout, as in
+  `layout_hierarchy(state)`.
 
 - island_gap:
 
   The distance, in hexagon widths, beyond which landmasses are tiled as
   separate islands. Use `Inf` to tile all land together.
-
-- group_gap:
-
-  The width of the gap between groups, as a fraction of the hexagon
-  width. The hexagons along group borders are trimmed to make this gap,
-  so they are slightly smaller than other hexagons. Only used with
-  `group`.
 
 - crs:
 
@@ -66,6 +47,11 @@ hexmap(
   Defaults to the CRS of `object`, or for longitude/latitude input, to a
   Lambert azimuthal equal-area CRS centred on the data
   (`"+proj=laea +lat_0=... +lon_0=..."`).
+
+- ...:
+
+  Not used. The groups of regions, and the gap between them, are now
+  arguments of the layout, such as `layout_hierarchy(state, gap = 0.1)`.
 
 ## Value
 
@@ -85,15 +71,15 @@ tiled separately, with one hexagon for each region on that landmass.
 Their hexagons are separated by at least one empty hexagon, so islands
 such as Tasmania remain distinct from the mainland.
 
-The hexagons are arranged by `layout`. When `group` is given, the
-hexagons of each group (e.g. state) are kept contiguous and a gap of
-`group_gap` hexagon widths is cut along the borders between groups, so
-that each group is visually distinct. Groups usually need a very
-different area of hexagons than they cover on the map, so the map is
-distorted to fit them, and each layout distorts it differently. By
-default, the groups are laid out first, keeping each group's shape and
-touching the groups it borders on the map, and the regions are then
-placed within each group. Without `group`, all regions form a single
+The hexagons are arranged by `layout`, which also sets the groups of
+regions (e.g. states) to keep together, such as
+`layout_hierarchy(state)`. The hexagons of each group are kept
+contiguous, and a gap is cut along the borders between groups, so that
+each group is visually distinct. Groups can be nested, such as
+`layout_hierarchy(state / region)`, to keep regions together within each
+state. Groups usually need a very different area of hexagons than they
+cover on the map, so the map is distorted to fit them, and each layout
+distorts it differently. Without groups, all regions form a single
 group, so the layout only sets the shape of the hexagons and where
 regions are placed within them. See
 [layouts](https://pkg.mitchelloharawild.com/hexmap/reference/layouts.md)
@@ -121,7 +107,7 @@ for how the hexagons are arranged.
 
 ``` r
 library(sf)
-#> Linking to GEOS 3.12.1, GDAL 3.8.4, PROJ 9.4.0; sf_use_s2() is TRUE
+#> Linking to GEOS 3.14.1, GDAL 3.12.2, PROJ 9.7.1; sf_use_s2() is TRUE
 # The 2025 Australian federal election, in the Australian Albers projection
 election <- st_transform(aus_election_2025, 3577)
 # A hexagon for each electoral division
@@ -146,7 +132,7 @@ head(election_hex)
 
 # \donttest{
 # Keep the divisions of each state together (takes a few seconds)
-election_hex <- hexmap(election, group = state)
+election_hex <- hexmap(election, layout_hierarchy(state))
 # }
 
 library(ggplot2)
@@ -157,13 +143,13 @@ ggplot(election_hex) +
 # \donttest{
 # Hexagons made for a globe centred on Australia
 globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
-ggplot(hexmap(election, group = state, crs = globe)) +
+ggplot(hexmap(election, layout_hierarchy(state), crs = globe)) +
   geom_sf(aes(fill = state)) +
   coord_sf(crs = globe)
 
 # }
 # \donttest{
 # Add the hexagons as a second geometry column, alongside the regions
-election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
+election <- dplyr::mutate(election, hex = hexmap(geometry, layout_hierarchy(state)))
 # }
 ```

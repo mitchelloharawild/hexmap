@@ -38,7 +38,7 @@ projection is equal-area.
 
 ``` r
 
-ced_hex <- hexmap(ced, group = state, crs = 3577)
+ced_hex <- hexmap(ced, layout_hierarchy(state), crs = 3577)
 ggplot(ced_hex) +
   geom_sf(aes(fill = state))
 ```
@@ -80,7 +80,7 @@ it will be plotted in.
 ``` r
 
 globe <- "+proj=ortho +lat_0=0 +lon_0=90"
-globe_hex <- hexmap(ced, group = state, crs = globe)
+globe_hex <- hexmap(ced, layout_hierarchy(state), crs = globe)
 ggplot(globe_hex) +
   geom_sf(aes(fill = state))
 ```
@@ -93,8 +93,8 @@ Compared with the Albers hexagons plotted on the same globe:
 
 The hexagons made on the globe are regular, and tile the outline of
 Australia as it appears from this viewpoint. The hexagon size,
-`island_gap`, `group_gap` and the group layouts are all measured in the
-plane of this projection.
+`island_gap`, the gap between groups and the layouts are all measured in
+the plane of this projection.
 
 An orthographic globe only shows one hemisphere, so centre it well away
 from the region. Hexagons on the edge of a region near the horizon may
