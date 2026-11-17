@@ -28,10 +28,10 @@ hierarchy_tiles <- function(geometry, group, land, cellsize, shape = 0.4,
   warp <- warp_groups(group_shape, tabulate(id), resolution, shape, 1.5 * cellsize)
 
   # The pieces of each group on each landmass, warped and as scaled copies
-  piece <- as.integer(interaction(id, land$region, drop = TRUE))
+  piece <- as.integer(interaction(id, land$landmass, drop = TRUE))
   n_piece <- max(piece)
   first <- match(seq_len(n_piece), piece)
-  piece_land <- land$region[first]
+  piece_land <- land$landmass[first]
   size <- tabulate(piece, n_piece)
   original <- do.call(c, lapply(split(geometry, piece), st_union))
   simple <- simplify_polygons(original, cellsize / 10)
@@ -61,7 +61,7 @@ hierarchy_tiles <- function(geometry, group, land, cellsize, shape = 0.4,
   to_warped <- signed_distance(centre, warped) / cellsize
   to_scaled <- signed_distance(centre, scaled) / cellsize
   adjacent <- hex_adjacency(centre, cellsize)
-  n_land <- tabulate(land$region)
+  n_land <- tabulate(land$landmass)
   owner <- integer(length(lattice))
   for (b in order(n_land, decreasing = TRUE)) {
     if (n_land[b] == 0) next
@@ -92,8 +92,8 @@ hierarchy_tiles <- function(geometry, group, land, cellsize, shape = 0.4,
       weight[["copy"]] * signed_distance(centre, scaled) / cellsize
     cost <- distance + pmax(distance, 0)^2 + extra
     label <- integer(length(tile))
-    for (b in unique(land$region)) {
-      i <- which(land$region == b)
+    for (b in unique(land$landmass)) {
+      i <- which(land$landmass == b)
       j <- which(hex_land == b)
       split <- cost[j, piece[i], drop = FALSE]
       label[j] <- piece[i][as.integer(clue::solve_LSAP(split - min(split)))]
@@ -262,43 +262,37 @@ anneal_pieces <- function(label, cost, neighbour, adjacent, xy, iterations) {
   }
   pieces <- function(label, p) max(0L, connected_components(adjacent, which(label == p)))
 
-  # Use a fixed seed without changing the user's random numbers
-  if (exists(".Random.seed", globalenv())) {
-    seed <- get(".Random.seed", globalenv())
-    on.exit(assign(".Random.seed", seed, globalenv()))
-  } else {
-    on.exit(rm(".Random.seed", envir = globalenv()))
-  }
-  set.seed(1)
-
-  current <- total(label)
-  best <- label
-  lowest <- current
-  for (iter in seq_len(if (n_piece > 1) iterations else 0)) {
-    temperature <- 5 * (1 - iter / iterations) + 0.01
-    i <- sample.int(length(label), 1)
-    across <- adjacent[[i]][label[adjacent[[i]]] != label[i]]
-    if (!length(across)) next
-    a <- label[i]
-    b <- label[across[sample.int(length(across), 1)]]
-    candidate <- which(label == b)
-    candidate <- candidate[vapply(adjacent[candidate], function(k) any(label[k] == a),
-                                  logical(1))]
-    j <- candidate[sample.int(length(candidate), 1)]
-    swapped <- label
-    swapped[c(i, j)] <- c(b, a)
-    proposed <- total(swapped)
-    if (proposed <= current || stats::runif(1) < exp((current - proposed) / temperature)) {
-      if (pieces(swapped, a) > 1 || pieces(swapped, b) > 1) next
-      label <- swapped
-      current <- proposed
-      if (current < lowest) {
-        best <- label
-        lowest <- current
+  # A fixed seed, without changing the user's random numbers
+  with_seed(1, {
+    current <- total(label)
+    best <- label
+    lowest <- current
+    for (iter in seq_len(if (n_piece > 1) iterations else 0)) {
+      temperature <- 5 * (1 - iter / iterations) + 0.01
+      i <- sample.int(length(label), 1)
+      across <- adjacent[[i]][label[adjacent[[i]]] != label[i]]
+      if (!length(across)) next
+      a <- label[i]
+      b <- label[across[sample.int(length(across), 1)]]
+      candidate <- which(label == b)
+      candidate <- candidate[vapply(adjacent[candidate], function(k) any(label[k] == a),
+                                    logical(1))]
+      j <- candidate[sample.int(length(candidate), 1)]
+      swapped <- label
+      swapped[c(i, j)] <- c(b, a)
+      proposed <- total(swapped)
+      if (proposed <= current || stats::runif(1) < exp((current - proposed) / temperature)) {
+        if (pieces(swapped, a) > 1 || pieces(swapped, b) > 1) next
+        label <- swapped
+        current <- proposed
+        if (current < lowest) {
+          best <- label
+          lowest <- current
+        }
       }
     }
-  }
-  best
+    best
+  })
 }
 
 # Fills the dents and holes of a set of hexagons (those filled by growing and

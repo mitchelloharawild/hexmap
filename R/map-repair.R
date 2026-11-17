@@ -54,44 +54,39 @@ repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * 
   }
   pieces <- function(label, p) max(0L, connected_components(adjacent, which(label == p)))
 
-  # Use a fixed seed without changing the user's random numbers
-  if (exists(".Random.seed", globalenv())) {
-    seed <- get(".Random.seed", globalenv())
-    on.exit(assign(".Random.seed", seed, globalenv()))
-  } else {
-    on.exit(rm(".Random.seed", envir = globalenv()))
-  }
-  set.seed(1)
-
-  label <- piece
-  current <- cost(label)
-  best <- label
-  lowest <- current
-  for (iter in seq_len(if (n_piece > 1) iterations else 0)) {
-    temperature <- 5 * (1 - iter / iterations) + 0.01
-    # A hexagon on a border, and a hexagon across it that touches its piece
-    i <- sample.int(length(label), 1)
-    across <- adjacent[[i]][label[adjacent[[i]]] != label[i]]
-    if (!length(across)) next
-    a <- label[i]
-    b <- label[across[sample.int(length(across), 1)]]
-    candidate <- which(label == b)
-    candidate <- candidate[vapply(adjacent[candidate], function(k) any(label[k] == a),
-                                  logical(1))]
-    j <- candidate[sample.int(length(candidate), 1)]
-    swapped <- label
-    swapped[c(i, j)] <- c(b, a)
-    if (pieces(swapped, a) > pieces(label, a) || pieces(swapped, b) > pieces(label, b)) next
-    proposed <- cost(swapped)
-    if (proposed <= current || stats::runif(1) < exp((current - proposed) / temperature)) {
-      label <- swapped
-      current <- proposed
-      if (current < lowest) {
-        best <- label
-        lowest <- current
+  # A fixed seed, without changing the user's random numbers
+  best <- with_seed(1, {
+    label <- piece
+    current <- cost(label)
+    best <- label
+    lowest <- current
+    for (iter in seq_len(if (n_piece > 1) iterations else 0)) {
+      temperature <- 5 * (1 - iter / iterations) + 0.01
+      # A hexagon on a border, and a hexagon across it that touches its piece
+      i <- sample.int(length(label), 1)
+      across <- adjacent[[i]][label[adjacent[[i]]] != label[i]]
+      if (!length(across)) next
+      a <- label[i]
+      b <- label[across[sample.int(length(across), 1)]]
+      candidate <- which(label == b)
+      candidate <- candidate[vapply(adjacent[candidate], function(k) any(label[k] == a),
+                                    logical(1))]
+      j <- candidate[sample.int(length(candidate), 1)]
+      swapped <- label
+      swapped[c(i, j)] <- c(b, a)
+      if (pieces(swapped, a) > pieces(label, a) || pieces(swapped, b) > pieces(label, b)) next
+      proposed <- cost(swapped)
+      if (proposed <= current || stats::runif(1) < exp((current - proposed) / temperature)) {
+        label <- swapped
+        current <- proposed
+        if (current < lowest) {
+          best <- label
+          lowest <- current
+        }
       }
     }
-  }
+    best
+  })
 
   # Reallocate the regions of the pieces that changed. Reallocating from the
   # hexagons they had would compound how far they moved from their points.

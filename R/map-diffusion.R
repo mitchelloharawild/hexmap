@@ -44,9 +44,9 @@ diffusion_tiles <- function(geometry, group, land, cellsize, cartogram = 0.75,
     cellsize <- hex_cellsize(land_shape, length(geometry))
   }
   point <- warp(st_point_on_surface(geometry))
-  n <- tabulate(land$region, nbins = length(land_shape))
+  n <- tabulate(land$landmass, nbins = length(land_shape))
   grid <- landmass_grid(land_shape, n, cellsize)
-  index <- allocate_tiles(point, grid$tile, group, land$region, grid$landmass,
+  index <- allocate_tiles(point, grid$tile, group, land$landmass, grid$landmass,
                           warped[id], proximity)
   tile <- grid$tile[index]
   attr(tile, "point") <- st_coordinates(point)

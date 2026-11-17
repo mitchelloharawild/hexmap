@@ -81,7 +81,7 @@
 #' `group` (the group of each region, all equal without groups), `land` and `cellsize` (the width of
 #' the hexagons to use), which returns the hexagon of each region as an `sfc`
 #' of polygons. `land` is a list with the separately tiled landmasses as
-#' `geometry`, and the landmass of each region as `region`. Each group's
+#' `geometry`, and the landmass of each region as `landmass`. Each group's
 #' hexagons should be contiguous on each landmass.
 #'
 #' @param cartogram For `layout_diffusion()`, how far to warp the map, from 0
@@ -188,7 +188,7 @@ layout_diffusion <- function(cartogram = 0.75, resolution = 256, proximity = 0.1
 layout_compact <- function(anchor = NULL) {
   check_anchor_shape(anchor)
   function(geometry, group, land, cellsize) {
-    layout <- compact_tiles(geometry, group, land$region, cellsize,
+    layout <- compact_tiles(geometry, group, land$landmass, cellsize,
                             check_anchor(anchor, group))
     layout$tile[layout$index]
   }
@@ -200,7 +200,7 @@ layout_slice <- function(tree = NULL, anchor = NULL) {
   check_anchor_shape(anchor)
   check_tree_shape(tree)
   function(geometry, group, land, cellsize) {
-    layout <- slice_tiles(geometry, group, land$region, cellsize,
+    layout <- slice_tiles(geometry, group, land$landmass, cellsize,
                           check_anchor(anchor, group), check_tree(tree, group))
     layout$tile[layout$index]
   }
@@ -227,7 +227,7 @@ layout_repair <- function(layout, iterations = 30, border = 0) {
   check_number(border, 0, Inf)
   function(geometry, group, land, cellsize) {
     tile <- layout(geometry, group, land, cellsize)
-    repair_groups(tile, geometry, group, land$region,
+    repair_groups(tile, geometry, group, land$landmass,
                   iterations = round(iterations * length(tile)), border = border)
   }
 }

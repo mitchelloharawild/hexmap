@@ -28,7 +28,7 @@ landmasses <- function(geometry, cellsize, island_gap) {
   id[seed] <- connected_components(near)
 
   geometry <- lapply(split(polygons[seed], id[seed]), st_union)
-  list(geometry = do.call(c, geometry), region = id[where])
+  list(geometry = do.call(c, geometry), landmass = id[where])
 }
 
 # Tiles each landmass with n[k] hexagons from a common hexagon lattice. Each
