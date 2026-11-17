@@ -62,22 +62,24 @@ plot(hex["state"])
 
 <img src="man/figures/README-usage-1.png" alt="" width="70%" />
 
-Use `group` to keep the hexagons of each group, such as a state,
-together and touching the same neighbouring groups as on the map:
+Give the layout a group, such as a state, to keep the hexagons of each
+group together and touching the same neighbouring groups as on the map:
 
 ``` r
-hex <- hexmap(aus_election_2025, group = state)
+hex <- hexmap(aus_election_2025, layout_hierarchy(state))
 plot(hex["state"])
 ```
 
 <img src="man/figures/README-usage-group-1.png" alt="" width="70%" />
 
-Use `layout` to choose how the groups are arranged. See
+Choose another layout to change how the groups are arranged. Groups can
+also be nested, such as `layout_hierarchy(state / region)`, to keep
+regions together within each state. See
 [`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.html)
 for how the layouts compare.
 
 ``` r
-hex <- hexmap(aus_election_2025, group = state, layout = layout_compact())
+hex <- hexmap(aus_election_2025, layout_compact(state))
 plot(hex["state"])
 ```
 
@@ -89,7 +91,7 @@ with `crs`. See
 [`vignette("projections")`](https://pkg.mitchelloharawild.com/hexmap/articles/projections.html).
 
 ``` r
-hex <- hexmap(aus_election_2025, group = state, crs = 3577)
+hex <- hexmap(aus_election_2025, layout_hierarchy(state), crs = 3577)
 plot(hex["state"])
 ```
 
@@ -100,7 +102,7 @@ hexagons, so you can keep both:
 
 ``` r
 aus_election_2025 |>
-  dplyr::mutate(hex = hexmap(geometry, group = state))
+  dplyr::mutate(hex = hexmap(geometry, layout_hierarchy(state)))
 #> Simple feature collection with 150 features and 3 fields
 #> Active geometry column: geometry
 #> Geometry type: MULTIPOLYGON
@@ -116,7 +118,7 @@ aus_election_2025 |>
 #>  4 Banks     NSW   ALP   (((151.0724 -33.92941, 150.9… ((1218575 -552669.3, 121…
 #>  5 Barker    SA    LP    (((138.8476 -34.68052, 138.9… ((-430061 -144737.6, -43…
 #>  6 Barton    NSW   ALP   (((151.1301 -33.98377, 151.1… ((1701390 -967399.9, 170…
-#>  7 Bass      TAS   ALP   (((148.116 -40.51267, 148.11… ((1218575 -2184396, 1218…
+#>  7 Bass      TAS   ALP   (((148.116 -40.51267, 148.11… ((1336335 -2252385, 1218…
 #>  8 Bean      ACT   ALP   (((148.8042 -35.71401, 148.8… ((1571855 -756635.2, 167…
 #>  9 Bendigo   VIC   ALP   (((144.8124 -37.21391, 144.8… ((-312301.3 -348703.5, -…
 #> 10 Bennelong NSW   ALP   (((151.0733 -33.81869, 151.1… ((1336335 -348703.5, 133…
@@ -171,7 +173,7 @@ grid <- calculate_grid(election, grid_type = "hexagonal", seed = 1)
 election_geogrid <- assign_polygons(election, grid)
 
 # hexmap
-election_hexmap <- hexmap(election, group = state)
+election_hexmap <- hexmap(election, layout_hierarchy(state))
 ```
 
 <img src="man/figures/README-comparison-1.png" alt="" width="100%" />

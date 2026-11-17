@@ -66,9 +66,16 @@ centre_of <- function(x) {
   apply(xy, 2, function(v) tapply(v, x$state, mean))
 }
 
-layouts <- list(layout_hierarchy(), layout_repair(layout_diffusion()), layout_diffusion(cartogram = 0),
-                layout_diffusion(cartogram = 1), layout_compact(),
-                layout_repair(layout_compact()), layout_slice())
+# Each layout, given the name of the column of groups and the gap
+layouts <- list(
+  function(g, gap = 0.1) layout_hierarchy(g, gap = gap),
+  function(g, gap = 0.1) layout_repair(layout_diffusion(g, gap = gap)),
+  function(g, gap = 0.1) layout_diffusion(g, gap = gap, cartogram = 0),
+  function(g, gap = 0.1) layout_diffusion(g, gap = gap, cartogram = 1),
+  function(g, gap = 0.1) layout_compact(g, gap = gap),
+  function(g, gap = 0.1) layout_repair(layout_compact(g, gap = gap)),
+  function(g, gap = 0.1) layout_slice(g, gap = gap)
+)
 
 # The pairs of states whose tiles touch
 touching <- function(hex) {
@@ -82,25 +89,23 @@ borders <- c("ACT-NSW", "NSW-QLD", "NSW-SA", "NSW-VIC", "NT-QLD", "NT-SA", "NT-W
              "QLD-SA", "SA-VIC", "SA-WA")
 
 test_that("the diffusion layout keeps the borders between states", {
-  hex <- hexmap(ced, group = state, layout = layout_repair(layout_diffusion()),
-                group_gap = 0)
+  hex <- hexmap(ced, layout_repair(layout_diffusion(state, gap = 0)))
   expect_equal(touching(hex), borders)
   # Without repair, the borders are close but not exact
-  hex <- hexmap(ced, group = state, layout = layout_diffusion(), group_gap = 0)
+  hex <- hexmap(ced, layout_diffusion(state, gap = 0))
   expect_gte(length(intersect(touching(hex), borders)), length(borders) - 1)
 })
 
 test_that("layout_repair() fixes the borders of other layouts", {
-  hex <- hexmap(ced, group = state, group_gap = 0,
-                layout = layout_repair(layout_compact()))
+  hex <- hexmap(ced, layout_repair(layout_compact(state, gap = 0)))
   expect_true(all(borders %in% touching(hex)))
   # Repair keeps the hexagons of the layout
-  compact <- hexmap(ced, group = state, layout = layout_compact(), group_gap = 0)
+  compact <- hexmap(ced, layout_compact(state, gap = 0))
   expect_setequal(sf::st_geometry(hex), sf::st_geometry(compact))
 })
 
 test_that("the default hierarchy layout keeps borders, and the ACT inside NSW", {
-  hex <- hexmap(ced, group = state, group_gap = 0)
+  hex <- hexmap(ced, layout_hierarchy(state, gap = 0))
   expect_equal(touching(hex), borders)
   # Every hexagon of the ACT is surrounded by hexagons
   size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
@@ -128,10 +133,8 @@ border_kept <- function(hex) {
 }
 
 test_that("border keeps regions on the borders between states", {
-  hex <- hexmap(ced, group = state, layout = layout_repair(layout_diffusion()),
-                group_gap = 0)
-  kept <- hexmap(ced, group = state, group_gap = 0,
-                 layout = layout_repair(layout_diffusion(), border = 2))
+  hex <- hexmap(ced, layout_repair(layout_diffusion(state, gap = 0)))
+  kept <- hexmap(ced, layout_repair(layout_diffusion(state, gap = 0), border = 2))
   # Only the placement within each state changes
   for (s in unique(ced$state)) {
     expect_setequal(sf::st_geometry(kept)[kept$state == s], sf::st_geometry(hex)[hex$state == s])
@@ -140,23 +143,22 @@ test_that("border keeps regions on the borders between states", {
 })
 
 test_that("the diffusion layout keeps the outline of the map without warping", {
-  hex <- hexmap(ced, group = state, layout = layout_diffusion(cartogram = 0),
-                group_gap = 0)
+  hex <- hexmap(ced, layout_diffusion(state, gap = 0, cartogram = 0))
   outline <- sf::st_geometry(hexmap(ced, layout = layout_diffusion()))
   expect_setequal(sf::st_geometry(hex), outline)
   # Warping moves the outline
-  hex <- hexmap(ced, group = state, layout = layout_diffusion(), group_gap = 0)
+  hex <- hexmap(ced, layout_diffusion(state, gap = 0))
   expect_false(setequal(sf::st_geometry(hex), outline))
 })
 
 test_that("hexmap() keeps the tiles of each group contiguous", {
   for (layout in layouts) {
-    hex <- hexmap(ced, group = state, layout = layout, group_gap = 0)
+    hex <- hexmap(ced, layout("state", gap = 0))
     expect_true(all(group_pieces(hex, hex$state) == 1))
 
     # Each piece of a group that spans islands is contiguous
     expect_warning(
-      hex <- hexmap(ced, group = band, layout = layout, group_gap = 0),
+      hex <- hexmap(ced, layout("band", gap = 0)),
       NA
     )
     pieces <- group_pieces(hex, hex$band)
@@ -168,7 +170,7 @@ test_that("hexmap() keeps the tiles of each group contiguous", {
 
 test_that("hexmap() keeps each group in its place", {
   for (layout in layouts) {
-    xy <- centre_of(hexmap(ced, group = state, layout = layout))
+    xy <- centre_of(hexmap(ced, layout("state")))
     west_of <- function(a, b) all(xy[a, "X"] < xy[b, "X"])
     north_of <- function(a, b) all(xy[a, "Y"] > xy[b, "Y"])
     expect_true(west_of("WA", c("SA", "NT", "QLD", "NSW", "VIC")))
@@ -180,7 +182,7 @@ test_that("hexmap() keeps each group in its place", {
 })
 
 test_that("hexmap() lays out groups as compact blocks", {
-  hex <- hexmap(ced, group = state, layout = layout_compact(), group_gap = 0)
+  hex <- hexmap(ced, layout_compact(state, gap = 0))
   tas <- hex$state == "TAS"
   # The mainland has no holes
   mainland <- sf::st_union(sf::st_buffer(sf::st_geometry(hex[!tas, ]), 1))
@@ -195,13 +197,12 @@ test_that("hexmap() lays out groups as compact blocks", {
 test_that("anchor moves compact groups", {
   nsw <- sf::st_coordinates(sf::st_centroid(sf::st_union(ced[ced$state == "NSW", ])))
   anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-  xy <- centre_of(hexmap(ced, group = state,
-                          layout = layout_compact(anchor = anchor)))
+  xy <- centre_of(hexmap(ced, layout_compact(state, anchor = anchor)))
   expect_gt(xy["ACT", "X"], xy["NSW", "X"])
 })
 
 test_that("the slice layout cuts groups apart with straight borders", {
-  hex <- hexmap(ced, group = state, layout = layout_slice(), group_gap = 0)
+  hex <- hexmap(ced, layout_slice(state, gap = 0))
   expect_length(unique(sf::st_geometry(hex)), nrow(ced))
   expect_true(all(group_pieces(hex, hex$state) == 1))
 
@@ -222,8 +223,7 @@ test_that("the slice layout cuts groups apart with straight borders", {
 
 test_that("tree sets the cuts of the slice layout", {
   tree <- list(c("WA", "NT", "SA", "TAS"), c("QLD", "NSW", "ACT", "VIC"))
-  hex <- hexmap(ced, group = state, layout = layout_slice(tree = tree),
-                group_gap = 0)
+  hex <- hexmap(ced, layout_slice(state, gap = 0, tree = tree))
   expect_true(all(group_pieces(hex, hex$state) == 1))
   # The western states are all west of the eastern states
   x <- sf::st_coordinates(sf::st_centroid(sf::st_geometry(hex)))[, 1]
@@ -234,14 +234,14 @@ test_that("tree sets the cuts of the slice layout", {
 
 test_that("hexmap() separates groups with a gap", {
   gap <- 0.1
-  hex <- hexmap(ced, group = state, group_gap = gap)
+  hex <- hexmap(ced, layout_hierarchy(state, gap = gap))
   states <- split(sf::st_geometry(hex), hex$state)
   between <- sf::st_distance(sf::st_union(states$ACT), sf::st_union(states$NSW))
   size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
   expect_equal(as.numeric(between), gap * size, tolerance = 1e-6)
 
   # Hexagons only shrink along group borders
-  ungrouped <- hexmap(ced, group = state, group_gap = 0)
+  ungrouped <- hexmap(ced, layout_hierarchy(state, gap = 0))
   area <- as.numeric(sf::st_area(hex)) / as.numeric(sf::st_area(ungrouped))
   expect_true(all(area <= 1 + 1e-9))
   expect_true(any(area == 1))
@@ -251,17 +251,17 @@ test_that("hexmap() separates groups with a gap", {
 test_that("inputs are validated", {
   no_crs <- sf::st_set_crs(ced, NA)
   expect_error(hexmap(no_crs), "projected")
-  expect_error(hexmap(ced, group = state[1:3]), "one value for each region")
+  expect_error(hexmap(ced, layout_compact(state[1:3])), "one value for each region")
   empty <- ced[1:3, ]
   sf::st_geometry(empty)[2] <- sf::st_polygon()
   expect_error(hexmap(empty), "empty")
   compact <- function(anchor) {
-    hexmap(ced, group = state, layout = layout_compact(anchor = anchor))
+    hexmap(ced, layout_compact(state, anchor = anchor))
   }
   expect_error(compact(data.frame(group = "ACT")), "columns")
   expect_error(compact(data.frame(group = "X", x = 0, y = 0)), "unknown groups")
   slice <- function(tree) {
-    hexmap(ced, group = state, layout = layout_slice(tree = tree))
+    hexmap(ced, layout_slice(state, tree = tree))
   }
   expect_error(slice(list(1, 2)), "nested list of group names")
   expect_error(slice(list(unique(ced$state), "X")), "unknown groups: X")
@@ -272,7 +272,7 @@ test_that("inputs are validated", {
   expect_error(layout_repair(layout_compact(), border = -1), "`border`")
   expect_error(layout_diffusion(proximity = -1), "`proximity`")
   expect_error(layout_repair("compact"), "`layout` must be a layout function")
-  expect_error(hexmap(ced, group = state, layout = "compact"), "layout function")
+  expect_error(hexmap(ced, layout = "compact"), "layout function")
 })
 
 # Ratio of the shortest to the longest edge of each hexagon
@@ -335,7 +335,7 @@ test_that("hexmap() handles coordinate reference systems", {
 
 test_that("hexmap() keeps the columns and order of rows", {
   shuffled <- ced[rev(seq_len(nrow(ced))), ]
-  hex <- hexmap(shuffled, group = state, layout = layout_compact())
+  hex <- hexmap(shuffled, layout_compact(state))
   expect_named(hex, names(shuffled))
   expect_equal(sf::st_drop_geometry(hex), sf::st_drop_geometry(shuffled))
 })
@@ -347,39 +347,101 @@ test_that("hexmap() accepts a geometry column", {
   expect_equal(hex, sf::st_geometry(hexmap(ced)))
 
   group <- ced$state
-  grouped <- hexmap(geometry, group = group, layout = layout_compact())
-  expect_equal(grouped, sf::st_geometry(
-    hexmap(ced, group = state, layout = layout_compact())
-  ))
+  grouped <- hexmap(geometry, layout_compact(group))
+  expect_equal(grouped, sf::st_geometry(hexmap(ced, layout_compact(state))))
 
   skip_if_not_installed("dplyr")
-  with_hex <- dplyr::mutate(ced, hex = hexmap(geometry, group = state,
-                                              layout = layout_compact()))
+  with_hex <- dplyr::mutate(ced, hex = hexmap(geometry, layout_compact(state)))
   expect_equal(with_hex$hex, grouped)
   expect_equal(with_hex$geometry, geometry)
 })
 
 test_that("group can be a column name", {
   expect_equal(
-    hexmap(ced, group = "state", layout = layout_compact()),
-    hexmap(ced, group = state, layout = layout_compact())
+    hexmap(ced, layout_compact("state")),
+    hexmap(ced, layout_compact(state))
   )
   # Strings that aren't columns, or with a geometry column, hint at the column
-  expect_error(hexmap(ced, group = "states"), "unquoted")
-  expect_error(hexmap(sf::st_geometry(ced), group = "state"), "unquoted")
+  expect_error(hexmap(ced, layout_compact("states")), "unquoted")
+  expect_error(hexmap(sf::st_geometry(ced), layout_compact("state")), "unquoted")
+  # Unknown columns name the groups
+  expect_error(hexmap(ced, layout_compact(stat)), "Could not find the groups `stat`")
+})
+
+test_that("groups given to hexmap() point to the layout", {
+  expect_error(hexmap(ced, group = state), "now given to the layout")
+  expect_error(hexmap(ced, group_gap = 0), "now given to the layout")
+  expect_error(hexmap(ced, grop = state), "Unknown arguments to `hexmap\\(\\)`: `grop`")
 })
 
 test_that("more inputs are validated", {
   missing_group <- ced
   missing_group$state[c(2, 5)] <- NA
-  expect_error(hexmap(missing_group, group = state), "missing values \\(in rows 2, 5\\)")
+  expect_error(hexmap(missing_group, layout_compact(state)),
+               "missing values \\(in rows 2, 5\\)")
 
   expect_error(hexmap(ced[0, ]), "at least one region")
   expect_error(hexmap(data.frame(x = 1)), "sf object or a geometry column")
   expect_error(hexmap(ced, island_gap = "a"), "`island_gap` must be a number")
   expect_error(hexmap(ced, island_gap = -1), "`island_gap` must be a number")
-  expect_error(hexmap(ced, group = state, group_gap = -0.1), "`group_gap` must be a number")
+  expect_error(layout_compact(state, gap = -0.1), "`gap` must be numbers")
+  expect_error(hexmap(ced, layout_compact(state, gap = c(0.1, 0.2))),
+               "one for each of the 1 levels")
 
-  # Without groups there are no borders, so group_gap has no effect
-  expect_equal(hexmap(ced, group_gap = 0.2), hexmap(ced, group_gap = 0))
+  # Without groups there are no borders, so gap has no effect
+  expect_equal(hexmap(ced, layout_compact(gap = 0.2)), hexmap(ced, layout_compact(gap = 0)))
+})
+
+test_that("nested groups are contiguous at every level, within their outer groups", {
+  for (layout in layouts) {
+    nested <- hexmap(ced, layout(c("state", "half"), gap = 0))
+    expect_true(all(group_pieces(nested, nested$state) == 1))
+    expect_true(all(group_pieces(nested, paste(nested$state, nested$half)) == 1))
+  }
+  # Layouts that place the outer groups first keep their hexagons
+  for (layout in list(layout_hierarchy, layout_diffusion, layout_compact)) {
+    outer <- hexmap(ced, layout(state, gap = 0))
+    nested <- hexmap(ced, layout(state / half, gap = 0))
+    for (s in unique(ced$state)) {
+      expect_setequal(sf::st_geometry(nested)[ced$state == s],
+                      sf::st_geometry(outer)[ced$state == s])
+    }
+  }
+})
+
+test_that("nested groups can be given as column names", {
+  expect_equal(hexmap(ced, layout_compact(state / half)),
+               hexmap(ced, layout_compact(c("state", "half"))))
+  expect_equal(hexmap(ced, layout_compact(state / half)),
+               hexmap(ced, layout_compact("state" / "half")))
+  expect_error(hexmap(ced, layout_compact(c("state", "half") / band)), "not both")
+})
+
+test_that("gap can differ between levels of nested groups", {
+  hex <- hexmap(ced, layout_compact(state / half, gap = c(0.2, 0.05)))
+  size <- sqrt(2 * max(as.numeric(sf::st_area(hex))) / sqrt(3))
+  between <- function(a, b) {
+    as.numeric(sf::st_distance(sf::st_union(sf::st_geometry(hex)[a]),
+                               sf::st_union(sf::st_geometry(hex)[b])))
+  }
+  nsw <- hex$state == "NSW"
+  expect_equal(between(hex$state == "ACT", nsw), 0.2 * size, tolerance = 1e-6)
+  expect_equal(between(nsw & hex$half == "north", nsw & hex$half == "south"),
+               0.05 * size, tolerance = 1e-6)
+})
+
+test_that("custom layouts can return hexagons or a list with groups", {
+  compact <- layout_compact(state, gap = 0)
+  plain <- function(regions) compact(regions)$tile
+  expect_equal(hexmap(ced, plain), hexmap(ced, compact))
+  # Groups returned by the layout are separated by gaps and can be repaired
+  grouped <- function(regions) list(tile = plain(regions), groups = regions$data["state"])
+  expect_equal(hexmap(ced, grouped), hexmap(ced, layout_compact(state)))
+  expect_equal(hexmap(ced, layout_repair(grouped)),
+               hexmap(ced, layout_repair(layout_compact(state))))
+
+  expect_error(hexmap(ced, function(regions) 1), "must return the hexagon")
+  expect_error(hexmap(ced, function(regions) plain(regions)[1:3]), "one hexagon for each region")
+  expect_error(hexmap(ced, function(regions) list(tile = plain(regions), groups = 1)),
+               "must be a data frame")
 })

@@ -148,30 +148,3 @@ paths_to_group <- function(start, target, passable, adjacent) {
 attribute_data <- function(object) {
   if (inherits(object, "sf")) st_drop_geometry(object) else NULL
 }
-
-# Evaluates the group argument as a column of object or in env, accepting
-# a string naming a column, and checks it
-eval_group <- function(expr, object, env) {
-  data <- attribute_data(object)
-  group <- eval(expr, data, env)
-  if (is.character(group) && length(group) == 1 && NROW(object) != 1 &&
-      group %in% names(data)) {
-    group <- data[[group]]
-  }
-  check_group(group, object)
-  group
-}
-
-check_group <- function(group, object) {
-  if (is.null(group)) return()
-  if (length(group) != NROW(object)) {
-    stop("`group` must have one value for each region of `object`, such as a ",
-         "column of `object` given unquoted (e.g. `group = state`).", call. = FALSE)
-  }
-  if (anyNA(group)) {
-    row <- which(is.na(group))
-    stop("`group` must not contain missing values (in rows ",
-         paste(row[seq_len(min(5, length(row)))], collapse = ", "),
-         if (length(row) > 5) ", ...", ").", call. = FALSE)
-  }
-}

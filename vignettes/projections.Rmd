@@ -50,7 +50,7 @@ A hexagon map is drawn on a flat surface, but the regions it represents lie on t
 `hexmap()` makes regular, equally sized hexagons in the plane of a projected coordinate reference system (CRS). This is the CRS of the map, or the one given with `crs`. A map in longitude and latitude has no plane to make hexagons in, so by default it is projected with the Lambert azimuthal equal-area projection centred on the map, and a message names the CRS chosen. The hexagons are ordinary `sf` polygons, so they keep their location on the Earth and can be plotted with `geom_sf()` in any projection. They only look regular when plotted in the projection they were made in, and only cover equal areas on the ground when that projection is equal-area.
 
 ```{r albers}
-ced_hex <- hexmap(ced, group = state, crs = 3577)
+ced_hex <- hexmap(ced, layout_hierarchy(state), crs = 3577)
 ggplot(ced_hex) +
   geom_sf(aes(fill = state))
 ```
@@ -85,7 +85,7 @@ On a globe centred away from Australia, the continent is foreshortened towards t
 
 ```{r globe}
 globe <- "+proj=ortho +lat_0=0 +lon_0=90"
-globe_hex <- hexmap(ced, group = state, crs = globe)
+globe_hex <- hexmap(ced, layout_hierarchy(state), crs = globe)
 ggplot(globe_hex) +
   geom_sf(aes(fill = state))
 ```
@@ -97,7 +97,7 @@ hex_map(ced_hex, globe, "Made in EPSG:3577") +
   hex_map(globe_hex, globe, "Made on the globe")
 ```
 
-The hexagons made on the globe are regular, and tile the outline of Australia as it appears from this viewpoint. The hexagon size, `island_gap`, `group_gap` and the group layouts are all measured in the plane of this projection.
+The hexagons made on the globe are regular, and tile the outline of Australia as it appears from this viewpoint. The hexagon size, `island_gap`, the gap between groups and the layouts are all measured in the plane of this projection.
 
 An orthographic globe only shows one hemisphere, so centre it well away from the region. Hexagons on the edge of a region near the horizon may extend past it, where they have no location on the Earth.
 

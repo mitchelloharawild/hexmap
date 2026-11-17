@@ -21,5 +21,8 @@ if (requireNamespace("ozmaps", quietly = TRUE)) {
   ced$band <- cut(y, stats::quantile(y, 0:3 / 3), include.lowest = TRUE,
                   labels = c("south", "central", "north"))
 
+  # The northern and southern halves of each state, nested in the states
+  ced$half <- ifelse(y > stats::ave(y, ced$state, FUN = stats::median), "north", "south")
+
   ced_ll <- sf::st_transform(ced, 4326)
 }

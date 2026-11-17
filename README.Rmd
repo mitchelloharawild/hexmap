@@ -44,24 +44,24 @@ hex
 plot(hex["state"])
 ```
 
-Use `group` to keep the hexagons of each group, such as a state, together and touching the same neighbouring groups as on the map:
+Give the layout a group, such as a state, to keep the hexagons of each group together and touching the same neighbouring groups as on the map:
 
 ```{r usage-group, message = FALSE, fig.width = 6, fig.height = 4.5, out.width = "70%"}
-hex <- hexmap(aus_election_2025, group = state)
+hex <- hexmap(aus_election_2025, layout_hierarchy(state))
 plot(hex["state"])
 ```
 
-Use `layout` to choose how the groups are arranged. See [`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.html) for how the layouts compare.
+Choose another layout to change how the groups are arranged. Groups can also be nested, such as `layout_hierarchy(state / region)`, to keep regions together within each state. See [`vignette("layouts")`](https://pkg.mitchelloharawild.com/hexmap/articles/layouts.html) for how the layouts compare.
 
 ```{r usage-layout, message = FALSE, fig.width = 6, fig.height = 4.5, out.width = "70%"}
-hex <- hexmap(aus_election_2025, group = state, layout = layout_compact())
+hex <- hexmap(aus_election_2025, layout_compact(state))
 plot(hex["state"])
 ```
 
 The hexagons are regular in the projection they are made in, which is an equal-area projection for longitude/latitude maps unless you choose one with `crs`. See [`vignette("projections")`](https://pkg.mitchelloharawild.com/hexmap/articles/projections.html).
 
 ```{r usage-crs, fig.width = 6, fig.height = 4.5, out.width = "70%"}
-hex <- hexmap(aus_election_2025, group = state, crs = 3577)
+hex <- hexmap(aus_election_2025, layout_hierarchy(state), crs = 3577)
 plot(hex["state"])
 ```
 
@@ -69,7 +69,7 @@ Given a geometry column, `hexmap()` returns a geometry column of hexagons, so yo
 
 ```{r usage-column, message = FALSE}
 aus_election_2025 |>
-  dplyr::mutate(hex = hexmap(geometry, group = state))
+  dplyr::mutate(hex = hexmap(geometry, layout_hierarchy(state)))
 ```
 
 ## Example: the 2025 Australian federal election
@@ -83,7 +83,7 @@ Labor won 94 of the 150 seats at the 2025 Australian federal election. On a geog
 library(ggplot2)
 
 colours <- c(Labor = "#D7263D", Coalition = "#1F4E9C", Greens = "#2E9E44", Other = "#8C8C8C")
-election_hexmap <- hexmap(election, group = state)
+election_hexmap <- hexmap(election, layout_hierarchy(state))
 
 # Resample a closed ring to n points equally spaced along its boundary, anticlockwise
 resample_ring <- function(xy, n = 60) {
@@ -154,7 +154,7 @@ grid <- calculate_grid(election, grid_type = "hexagonal", seed = 1)
 election_geogrid <- assign_polygons(election, grid)
 
 # hexmap
-election_hexmap <- hexmap(election, group = state)
+election_hexmap <- hexmap(election, layout_hierarchy(state))
 ```
 
 ```{r comparison, echo = FALSE, message = FALSE, fig.width = 8, fig.height = 7}

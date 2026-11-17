@@ -9,17 +9,40 @@
 \alias{layout_repair}
 \title{Layouts of hexagons}
 \usage{
-layout_diffusion(cartogram = 0.75, resolution = 256, proximity = 0.1)
+layout_diffusion(
+  group = NULL,
+  gap = 0.1,
+  cartogram = 0.75,
+  resolution = 256,
+  proximity = 0.1
+)
 
-layout_compact(anchor = NULL)
+layout_compact(group = NULL, gap = 0.1, anchor = NULL)
 
-layout_slice(tree = NULL, anchor = NULL)
+layout_slice(group = NULL, gap = 0.1, tree = NULL, anchor = NULL)
 
-layout_hierarchy(shape = 0.4, resolution = 256, iterations = 30)
+layout_hierarchy(
+  group = NULL,
+  gap = 0.1,
+  shape = 0.4,
+  resolution = 256,
+  iterations = 30
+)
 
 layout_repair(layout, iterations = 30, border = 0)
 }
 \arguments{
+\item{group}{The groups of regions to keep together (e.g. states), as a
+column of the map given unquoted (\code{state}) or as a string (\code{"state"}),
+or as a vector with one value for each region. Nested groups are
+separated by \code{/}, outermost first (\code{state / region}). See the Groups
+section. Without groups, all regions form one group.}
+
+\item{gap}{The width of the gap between groups, as a fraction of the
+hexagon width, from 0 to 1, or a vector with one for each level of nested
+groups (outermost first). The hexagons along group borders are trimmed to
+make this gap, so they are slightly smaller than other hexagons.}
+
 \item{cartogram}{For \code{layout_diffusion()}, how far to warp the map, from 0
 (keep the outline of the map, squeezing groups into it) to 1 (make each
 group's area proportional to its number of regions, distorting the
@@ -41,19 +64,22 @@ its regions (e.g. outback rather than near its cities). With 0, only the
 shapes are used.}
 
 \item{anchor}{For \code{layout_compact()} and \code{layout_slice()}, a data frame
-with columns \code{group}, \code{x} and \code{y} giving positions (in the coordinates of
+with columns \code{group} (the names of outermost groups), \code{x} and \code{y} giving
+positions (in the coordinates of
 the map, after any transformation by the \code{crs} argument of \code{\link[=hexmap]{hexmap()}}) to
 use in place of the centroids of some groups when arranging them. For
 example, moving a group's anchor east of its neighbour places its block
-on the east side of that neighbour.}
+on the east side of that neighbour. The inner groups of an anchored
+group move with it.}
 
-\item{tree}{For \code{layout_slice()}, the order in which groups are cut apart,
-as a nested list of group names. Each list is cut into its elements,
+\item{tree}{For \code{layout_slice()}, the order in which the outermost groups
+are cut apart, as a nested list of group names. Each list is cut into its elements,
 along whichever axis best separates them, and each character vector of
 several groups is cut automatically. For example,
 \code{list("WA", list(list("NT", "SA"), list("QLD", "NSW", "VIC")))} first
 separates WA from the other states, then NT and SA from the eastern
-states. Every group must appear exactly once.}
+states. Every group must appear exactly once. Each group is then cut
+into its inner groups automatically.}
 
 \item{shape}{For \code{layout_hierarchy()}, how far to restore each group's own
 shape after warping the map into a cartogram, from 0 (the cartogram) to 1
@@ -61,9 +87,10 @@ shape after warping the map into a cartogram, from 0 (the cartogram) to 1
 recognisable, but values above about 0.5 can fold the map.}
 
 \item{iterations}{For \code{layout_hierarchy()} and \code{layout_repair()}, the
-number of swaps of hexagons between groups to try, per region, when
-adjusting the borders between groups (from 0 upwards). More iterations
-are slower, but more likely to make every group touch as on the map.}
+number of swaps of hexagons between groups to try, per region and for
+each level of groups, when adjusting the borders between groups (from 0
+upwards). More iterations are slower, but more likely to make every
+group touch as on the map. With 0, the borders aren't adjusted.}
 
 \item{layout}{For \code{layout_repair()}, the layout to repair, such as
 \code{layout_compact()}.}
@@ -83,8 +110,9 @@ A layout function, for the \code{layout} argument of \code{\link[=hexmap]{hexmap
 }
 \description{
 These functions create a layout for the \code{layout} argument of \code{\link[=hexmap]{hexmap()}},
-which arranges the hexagons, and the hexagons of each group (e.g. state).
-Groups usually need a very different area of hexagons than they cover on
+which arranges the hexagons, and the hexagons of each group of regions
+(e.g. state), given by \code{group} as in \code{layout_hierarchy(state)}. Groups
+usually need a very different area of hexagons than they cover on
 the map (e.g. densely populated states have many small regions), so the
 map has to be distorted, and each layout distorts it differently. See
 \code{vignette("layouts")} for how they compare.
@@ -130,8 +158,8 @@ keep their relative position (e.g. one above the other for a horizontal
 cut) and pieces don't become thin.
 }
 
-\code{layout_repair()} wraps any layout to then adjust the borders between
-groups, so that groups touch where they share a border on the map, and
+\code{layout_repair()} wraps any layout (and uses its groups) to then adjust the
+borders between groups, so that groups touch where they share a border on the map, and
 don't touch where they don't. Pairs of hexagons are swapped across group
 borders (by simulated annealing), which keeps the hexagons of the layout,
 and keeps each group's hexagons contiguous and compact. Repairing a slice
@@ -140,15 +168,44 @@ placed on their group's hexagons keeping their distances to borders as well
 as their positions: regions near the coast or another group stay near it,
 and regions away from borders stay away from them.
 }
+\section{Groups}{
+
+\code{group} is evaluated when the layout is used by \code{\link[=hexmap]{hexmap()}}, as a column of
+the map, or else as a variable where the layout was created. It can be a
+column given unquoted (\code{group = state}) or as a string (\code{group = "state"}), or a vector with one value for each region. To use a layout
+with a geometry column, such as inside \code{dplyr::mutate()}, create it where
+the groups can be found, as in
+\code{mutate(hex = hexmap(geometry, layout_hierarchy(state)))}.
+
+Nested groups are separated by \code{/}, outermost first, such as \code{state / region} for regions within states (or given as a character vector of
+column names, such as \code{c("state", "region")}). Inner groups are nested in
+their outer groups, so a region named "North" in two states is two groups.
+The hexagons of each group are contiguous at every level, and each inner
+group is kept within the hexagons of its outer group. \code{layout_slice()}
+cuts apart the groups at every level, so all borders are straight. The
+other layouts lay out the outermost groups, then split the hexagons of
+each group between its inner groups by where their regions were placed
+(and \code{layout_hierarchy()} then adjusts the borders between inner groups,
+as for outer groups). \code{gap} can give a gap for each level, such as \code{gap = c(0.2, 0.05)}, and a border between outer groups takes the largest gap of
+any level it separates.
+}
+
 \section{Arguments shared by layouts}{
 
 An argument has the same name, meaning and default in every layout that
 takes it:
 \itemize{
+\item \code{group} (every layout except \code{layout_repair()}, which uses the groups of
+the layout it repairs) is the groups of regions to keep together.
+\item \code{gap} (every layout except \code{layout_repair()}) is the width of the gap
+between groups.
 \item \code{resolution} (\code{layout_hierarchy()}, \code{layout_diffusion()}) is the size of
 the grid used to find the diffusion cartogram.
 \item \code{iterations} (\code{layout_hierarchy()}, \code{layout_repair()}) is the number of
 hexagon swaps tried per region when adjusting the borders between groups.
+\code{layout_hierarchy()} already adjusts the borders of its groups, so
+\code{layout_repair(layout_hierarchy())} only adds more swaps: increase the
+\code{iterations} of \code{layout_hierarchy()} instead.
 \item \code{anchor} (\code{layout_compact()}, \code{layout_slice()}) moves where groups are
 placed relative to each other.
 }
@@ -165,12 +222,31 @@ to borders).
 
 \section{Custom layouts}{
 
-A layout is a function with arguments \code{geometry} (the regions' geometry),
-\code{group} (the group of each region, all equal without groups), \code{land} and \code{cellsize} (the width of
-the hexagons to use), which returns the hexagon of each region as an \code{sfc}
-of polygons. \code{land} is a list with the separately tiled landmasses as
-\code{geometry}, and the landmass of each region as \code{region}. Each group's
-hexagons should be contiguous on each landmass.
+A layout is a function of one argument, \code{regions}, a list with:
+\itemize{
+\item \code{geometry}: the regions' geometry, as an \code{sfc} in the projected CRS the
+hexagons are made in.
+\item \code{data}: the other columns of the map, as a data frame (or \code{NULL} for a
+geometry column).
+\item \code{land}: the separately tiled landmasses, as a list with their geometry
+as \code{geometry}, and the landmass of each region as \code{landmass}.
+\item \code{cellsize}: the width of hexagons that would cover the land, one for
+each region.
+}
+
+It returns the hexagon of each region as an \code{sfc} of polygons, in the
+order of the regions, or a list with the hexagons as \code{tile} and
+optionally:
+\itemize{
+\item \code{groups}: the groups of regions, as a data frame with one row for each
+region and a column for each level of groups (outermost first), so that
+\code{\link[=hexmap]{hexmap()}} cuts gaps between them and \code{layout_repair()} can repair them.
+Each group's hexagons should be contiguous on each landmass.
+\item \code{gap}: the gap between groups at each level (by default 0.1).
+\item \code{cellsize}: the width of the hexagons, if it isn't \code{regions$cellsize}.
+\item \code{point}: a matrix with the position of each region (in the coordinates
+of the hexagons) that it was placed from, used by \code{layout_repair()}.
+}
 }
 
 \examples{
@@ -181,20 +257,22 @@ election <- st_transform(aus_election_2025, 3577)
 # Compact blocks, with the ACT on the east side of NSW
 nsw <- st_coordinates(st_centroid(st_union(election[election$state == "NSW", ])))
 anchor <- data.frame(group = "ACT", x = nsw[1] + 5e5, y = nsw[2])
-election_hex <- hexmap(election, group = state,
-                       layout = layout_compact(anchor = anchor))
+election_hex <- hexmap(election, layout_compact(state, anchor = anchor))
+
+# Nested groups: the city and country divisions of each state, with a
+# wider gap between states
+election$area <- ifelse(election$division \%in\% c("Sydney", "Melbourne"),
+                        "city", "country")
+election_hex <- hexmap(election, layout_slice(state / area, gap = c(0.2, 0.05)))
 
 \donttest{
 # The other layouts take a few seconds each
 # Each state keeps its shape, at the expense of the outline of Australia
-election_hex <- hexmap(election, group = state,
-                       layout = layout_hierarchy())
+election_hex <- hexmap(election, layout_hierarchy(state))
 # Keep more of the outline of Australia
-election_hex <- hexmap(election, group = state,
-                       layout = layout_diffusion(cartogram = 0.5))
+election_hex <- hexmap(election, layout_diffusion(state, cartogram = 0.5))
 # Compact blocks that touch as the states do
-election_hex <- hexmap(election, group = state,
-                       layout = layout_repair(layout_compact()))
+election_hex <- hexmap(election, layout_repair(layout_compact(state)))
 }
 }
 \references{

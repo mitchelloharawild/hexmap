@@ -4,41 +4,29 @@
 \alias{hexmap}
 \title{Convert a map into a hexagon tile map}
 \usage{
-hexmap(
-  object,
-  group = NULL,
-  layout = layout_hierarchy(),
-  island_gap = 0.5,
-  group_gap = 0.1,
-  crs = NULL
-)
+hexmap(object, layout = layout_hierarchy(), island_gap = 0.5, crs = NULL, ...)
 }
 \arguments{
 \item{object}{An sf object, or a geometry column (sfc), of regions in a
 projected or longitude/latitude coordinate reference system.}
 
-\item{group}{Optionally, the group of each region (e.g. states), as a column
-of \code{object} given unquoted (\code{group = state}) or as a string
-(\code{group = "state"}), or as a vector with one value for each region.}
-
-\item{layout}{How the hexagons (and groups) are arranged, as a layout
-function such as \code{\link[=layout_hierarchy]{layout_hierarchy()}} (the default),
+\item{layout}{How the hexagons, and the groups of regions, are arranged,
+as a layout function such as \code{\link[=layout_hierarchy]{layout_hierarchy()}} (the default),
 \code{\link[=layout_diffusion]{layout_diffusion()}}, \code{\link[=layout_compact]{layout_compact()}} or \code{\link[=layout_slice]{layout_slice()}}, optionally
-wrapped in \code{\link[=layout_repair]{layout_repair()}} to fix which groups touch.}
+wrapped in \code{\link[=layout_repair]{layout_repair()}} to fix which groups touch. The groups are
+given to the layout, as in \code{layout_hierarchy(state)}.}
 
 \item{island_gap}{The distance, in hexagon widths, beyond which landmasses
 are tiled as separate islands. Use \code{Inf} to tile all land together.}
-
-\item{group_gap}{The width of the gap between groups, as a fraction of the
-hexagon width. The hexagons along group borders are trimmed to make this
-gap, so they are slightly smaller than other hexagons. Only used with
-\code{group}.}
 
 \item{crs}{The projected coordinate reference system to make the hexagons
 in, such as the one the map will be plotted in. \code{object} is transformed
 to \code{crs} with \code{\link[sf:st_transform]{sf::st_transform()}}. Defaults to the CRS of \code{object}, or
 for longitude/latitude input, to a Lambert azimuthal equal-area CRS
 centred on the data (\code{"+proj=laea +lat_0=... +lon_0=..."}).}
+
+\item{...}{Not used. The groups of regions, and the gap between them, are
+now arguments of the layout, such as \code{layout_hierarchy(state, gap = 0.1)}.}
 }
 \value{
 For an sf object, \code{object} with its geometry replaced by hexagons, keeping
@@ -60,19 +48,18 @@ tiled separately, with one hexagon for each region on that landmass. Their
 hexagons are separated by at least one empty hexagon, so islands such as
 Tasmania remain distinct from the mainland.
 
-The hexagons are arranged by \code{layout}. When \code{group} is given, the hexagons
-of each group (e.g. state) are kept contiguous and a gap of \code{group_gap}
-hexagon widths is cut along the borders between groups, so that each group
-is visually distinct. Groups usually need a very different area of
-hexagons than they cover on the map, so the map is distorted to fit them,
-and each layout distorts it differently. By default, the groups are laid
-out first, keeping each group's shape and touching the groups it borders on
-the map, and the regions are then placed within each group. Without
-\code{group}, all regions form a single group, so the layout only sets the
-shape of the hexagons and where regions are placed within them. See
-\link{layouts} for the available layouts, and \code{vignette("layouts")} for how
-they compare. Grouping works best for groups that are spatially
-contiguous, such as states.
+The hexagons are arranged by \code{layout}, which also sets the groups of
+regions (e.g. states) to keep together, such as
+\code{layout_hierarchy(state)}. The hexagons of each group are kept contiguous,
+and a gap is cut along the borders between groups, so that each group is
+visually distinct. Groups can be nested, such as \code{layout_hierarchy(state / region)}, to keep regions together within each state. Groups usually need
+a very different area of hexagons than they cover on the map, so the map
+is distorted to fit them, and each layout distorts it differently. Without
+groups, all regions form a single group, so the layout only sets the shape
+of the hexagons and where regions are placed within them. See \link{layouts}
+for the available layouts, and \code{vignette("layouts")} for how they compare.
+Grouping works best for groups that are spatially contiguous, such as
+states.
 
 The hexagons are regular and equally sized in the coordinate reference
 system (CRS) they are made in, which is the CRS of \code{object} unless \code{crs} is
@@ -94,7 +81,7 @@ head(election_hex)
 
 \donttest{
 # Keep the divisions of each state together (takes a few seconds)
-election_hex <- hexmap(election, group = state)
+election_hex <- hexmap(election, layout_hierarchy(state))
 }
 
 \dontshow{if (requireNamespace("ggplot2", quietly = TRUE)) withAutoprint(\{ # examplesIf}
@@ -105,7 +92,7 @@ ggplot(election_hex) +
 \donttest{
 # Hexagons made for a globe centred on Australia
 globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
-ggplot(hexmap(election, group = state, crs = globe)) +
+ggplot(hexmap(election, layout_hierarchy(state), crs = globe)) +
   geom_sf(aes(fill = state)) +
   coord_sf(crs = globe)
 }
@@ -113,7 +100,7 @@ ggplot(hexmap(election, group = state, crs = globe)) +
 \dontshow{if (requireNamespace("dplyr", quietly = TRUE)) withAutoprint(\{ # examplesIf}
 \donttest{
 # Add the hexagons as a second geometry column, alongside the regions
-election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
+election <- dplyr::mutate(election, hex = hexmap(geometry, layout_hierarchy(state)))
 }
 \dontshow{\}) # examplesIf}
 }

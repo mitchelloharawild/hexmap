@@ -10,19 +10,19 @@
 #' hexagons are separated by at least one empty hexagon, so islands such as
 #' Tasmania remain distinct from the mainland.
 #'
-#' The hexagons are arranged by `layout`. When `group` is given, the hexagons
-#' of each group (e.g. state) are kept contiguous and a gap of `group_gap`
-#' hexagon widths is cut along the borders between groups, so that each group
-#' is visually distinct. Groups usually need a very different area of
-#' hexagons than they cover on the map, so the map is distorted to fit them,
-#' and each layout distorts it differently. By default, the groups are laid
-#' out first, keeping each group's shape and touching the groups it borders on
-#' the map, and the regions are then placed within each group. Without
-#' `group`, all regions form a single group, so the layout only sets the
-#' shape of the hexagons and where regions are placed within them. See
-#' [layouts] for the available layouts, and `vignette("layouts")` for how
-#' they compare. Grouping works best for groups that are spatially
-#' contiguous, such as states.
+#' The hexagons are arranged by `layout`, which also sets the groups of
+#' regions (e.g. states) to keep together, such as
+#' `layout_hierarchy(state)`. The hexagons of each group are kept contiguous,
+#' and a gap is cut along the borders between groups, so that each group is
+#' visually distinct. Groups can be nested, such as `layout_hierarchy(state /
+#' region)`, to keep regions together within each state. Groups usually need
+#' a very different area of hexagons than they cover on the map, so the map
+#' is distorted to fit them, and each layout distorts it differently. Without
+#' groups, all regions form a single group, so the layout only sets the shape
+#' of the hexagons and where regions are placed within them. See [layouts]
+#' for the available layouts, and `vignette("layouts")` for how they compare.
+#' Grouping works best for groups that are spatially contiguous, such as
+#' states.
 #'
 #' The hexagons are regular and equally sized in the coordinate reference
 #' system (CRS) they are made in, which is the CRS of `object` unless `crs` is
@@ -34,24 +34,20 @@
 #'
 #' @param object An sf object, or a geometry column (sfc), of regions in a
 #'   projected or longitude/latitude coordinate reference system.
-#' @param group Optionally, the group of each region (e.g. states), as a column
-#'   of `object` given unquoted (`group = state`) or as a string
-#'   (`group = "state"`), or as a vector with one value for each region.
-#' @param layout How the hexagons (and groups) are arranged, as a layout
-#'   function such as [layout_hierarchy()] (the default),
+#' @param layout How the hexagons, and the groups of regions, are arranged,
+#'   as a layout function such as [layout_hierarchy()] (the default),
 #'   [layout_diffusion()], [layout_compact()] or [layout_slice()], optionally
-#'   wrapped in [layout_repair()] to fix which groups touch.
+#'   wrapped in [layout_repair()] to fix which groups touch. The groups are
+#'   given to the layout, as in `layout_hierarchy(state)`.
 #' @param island_gap The distance, in hexagon widths, beyond which landmasses
 #'   are tiled as separate islands. Use `Inf` to tile all land together.
-#' @param group_gap The width of the gap between groups, as a fraction of the
-#'   hexagon width. The hexagons along group borders are trimmed to make this
-#'   gap, so they are slightly smaller than other hexagons. Only used with
-#'   `group`.
 #' @param crs The projected coordinate reference system to make the hexagons
 #'   in, such as the one the map will be plotted in. `object` is transformed
 #'   to `crs` with [sf::st_transform()]. Defaults to the CRS of `object`, or
 #'   for longitude/latitude input, to a Lambert azimuthal equal-area CRS
 #'   centred on the data (`"+proj=laea +lat_0=... +lon_0=..."`).
+#' @param ... Not used. The groups of regions, and the gap between them, are
+#'   now arguments of the layout, such as `layout_hierarchy(state, gap = 0.1)`.
 #'
 #' @return
 #' For an sf object, `object` with its geometry replaced by hexagons, keeping
@@ -75,7 +71,7 @@
 #'
 #' \donttest{
 #' # Keep the divisions of each state together (takes a few seconds)
-#' election_hex <- hexmap(election, group = state)
+#' election_hex <- hexmap(election, layout_hierarchy(state))
 #' }
 #'
 #' @examplesIf requireNamespace("ggplot2", quietly = TRUE)
@@ -86,7 +82,7 @@
 #' \donttest{
 #' # Hexagons made for a globe centred on Australia
 #' globe <- "+proj=ortho +lat_0=-25 +lon_0=134"
-#' ggplot(hexmap(election, group = state, crs = globe)) +
+#' ggplot(hexmap(election, layout_hierarchy(state), crs = globe)) +
 #'   geom_sf(aes(fill = state)) +
 #'   coord_sf(crs = globe)
 #' }
@@ -94,34 +90,75 @@
 #' @examplesIf requireNamespace("dplyr", quietly = TRUE)
 #' \donttest{
 #' # Add the hexagons as a second geometry column, alongside the regions
-#' election <- dplyr::mutate(election, hex = hexmap(geometry, group = state))
+#' election <- dplyr::mutate(election, hex = hexmap(geometry, layout_hierarchy(state)))
 #' }
 #'
 #' @importFrom sf st_area st_geometry st_point_on_surface
 #' @export
-hexmap <- function(object, group = NULL,
-                   layout = layout_hierarchy(),
-                   island_gap = 0.5, group_gap = 0.1, crs = NULL) {
+hexmap <- function(object, layout = layout_hierarchy(), island_gap = 0.5,
+                   crs = NULL, ...) {
   check_object(object)
-  group <- eval_group(substitute(group), object, parent.frame())
-  check_number(island_gap, 0, Inf)
-  check_number(group_gap, 0, 1)
+  check_dots(...)
   check_layout(layout)
+  check_number(island_gap, 0, Inf)
   object <- prepare_crs(object, crs)
   check_not_empty(object)
   geometry <- st_geometry(object)
-  # Without groups, all regions form one group
-  if (is.null(group)) group <- rep(1L, length(geometry))
 
   cellsize <- hex_cellsize(geometry, length(geometry))
-  land <- landmasses(geometry, cellsize, island_gap)
-  tile <- layout(geometry, group, land, cellsize)
-  attr(tile, "point") <- NULL
-  attr(tile, "warp") <- NULL
-  # Layouts may change the size of the hexagons
-  cellsize <- sqrt(2 * stats::median(as.numeric(st_area(tile))) / sqrt(3))
-  if (group_gap > 0) tile <- inset_groups(tile, group, group_gap * cellsize)
+  regions <- list(
+    geometry = geometry,
+    data = attribute_data(object),
+    land = landmasses(geometry, cellsize, island_gap),
+    cellsize = cellsize
+  )
+  result <- as_layout_result(layout(regions), regions)
+  tile <- result$tile
+  if (any(result$gap > 0)) {
+    # Layouts may change the size of the hexagons
+    cellsize <- result$cellsize
+    if (is.null(cellsize)) cellsize <- sqrt(2 * stats::median(as.numeric(st_area(tile))) / sqrt(3))
+    tile <- inset_groups(tile, result$groups, result$gap * cellsize, cellsize)
+  }
   set_geometry(object, tile)
+}
+
+# Arguments that are now given to the layout
+check_dots <- function(...) {
+  if (!...length()) return(invisible())
+  args <- names(substitute(list(...)))[-1]
+  if (any(c("group", "group_gap") %in% args)) {
+    stop("The groups (and the gap between them) are now given to the layout, ",
+         "such as `layout = layout_hierarchy(state, gap = 0.1)`.", call. = FALSE)
+  }
+  stop("Unknown arguments to `hexmap()`",
+       if (length(args)) paste0(": ", paste0("`", args[nzchar(args)], "`", collapse = ", ")),
+       ".", call. = FALSE)
+}
+
+# Checks and completes the result of a layout: the hexagon of each region as
+# an sfc, or a list with the hexagons as tile, and optionally the groups (a
+# data frame of levels) and gap (for each level) to cut between them,
+# cellsize (the width of the hexagons), point (where each region was
+# allocated from) and warp (a function that warps geometries like the map).
+as_layout_result <- function(result, regions) {
+  if (inherits(result, "sfc")) result <- list(tile = result)
+  if (!is.list(result) || !inherits(result$tile, "sfc")) {
+    stop("A layout must return the hexagon of each region as an `sfc`, or a ",
+         "list with the hexagons as `tile`.", call. = FALSE)
+  }
+  n <- length(regions$geometry)
+  if (length(result$tile) != n) {
+    stop("A layout must return one hexagon for each region (", n, "), not ",
+         length(result$tile), ".", call. = FALSE)
+  }
+  groups <- result$groups
+  if (!is.null(groups) && (!is.data.frame(groups) || nrow(groups) != n || !ncol(groups))) {
+    stop("The `groups` of a layout must be a data frame with one row for each ",
+         "region, and a column for each level of groups.", call. = FALSE)
+  }
+  result$gap <- level_gap(if (is.null(result$gap)) 0.1 else result$gap, groups)
+  result
 }
 
 # Projects longitude/latitude objects to an equal-area CRS centred on the data
@@ -166,18 +203,27 @@ equal_area_crs <- function(object) {
   paste0("+proj=laea +lat_0=", centre[2], " +lon_0=", centre[1])
 }
 
-# Trims gap / 2 from each tile along the borders it shares with other groups
-#' @importFrom sf st_buffer st_crs st_difference st_sfc st_union
-inset_groups <- function(tile, group, gap) {
-  group <- as.integer(factor(group, exclude = NULL))
+# Trims gap[k] / 2 from each tile along the borders it shares with other
+# groups of level k, so a border between outer groups takes the largest gap
+# of any level it separates
+#' @importFrom sf st_buffer st_centroid st_crs st_difference st_is_within_distance
+#' @importFrom sf st_sfc st_union
+inset_groups <- function(tile, groups, gap, cellsize) {
+  near <- st_is_within_distance(st_centroid(tile), dist = 1.5 * cellsize)
   inset <- tile
-  for (g in unique(group)) {
-    others <- tile[group != g]
-    if (!length(others)) next
-    border <- st_buffer(st_union(others), gap / 2,
-                        joinStyle = "MITRE", mitreLimit = 2)[[1]]
-    i <- which(group == g)
-    inset[i] <- st_sfc(lapply(tile[i], st_difference, border), crs = st_crs(tile))
+  for (k in seq_along(gap)) {
+    if (gap[k] <= 0) next
+    key <- nest_key(groups, k)
+    for (g in unique(key)) {
+      i <- which(key == g)
+      # Only neighbouring hexagons are close enough to trim
+      others <- unique(unlist(near[i]))
+      others <- others[key[others] != g]
+      if (!length(others)) next
+      border <- st_buffer(st_union(tile[others]), gap[k] / 2,
+                          joinStyle = "MITRE", mitreLimit = 2)[[1]]
+      inset[i] <- st_sfc(lapply(inset[i], st_difference, border), crs = st_crs(tile))
+    }
   }
   inset
 }

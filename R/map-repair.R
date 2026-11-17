@@ -7,14 +7,18 @@
 # by how far apart the pieces are) while keeping the pieces compact and near
 # where they were. Regions of pieces that change are then reallocated to
 # their piece's hexagons, nearest to the points the layout allocated them from
-# (the attribute "point" of tile, in the coordinates of the tiles), or else to
-# the hexagons they had. With a border weight, the regions of every piece are
-# reallocated, also keeping their distances to borders (see border_cost()).
+# (point, in the coordinates of the tiles), or else to the hexagons they had.
+# With a border weight, the regions of every piece are reallocated, also
+# keeping their distances to borders (see border_cost()) on the map warped by
+# warp. With parent (the outer group of each region), pieces only swap
+# hexagons with pieces of the same outer group, so that the hexagons of each
+# outer group are kept.
 #
 # Returns the tile of each region.
 #' @importFrom sf st_area st_centroid st_coordinates st_union
 repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * length(tile),
-                          border = 0, weight = c(contact = 20, border = 1, position = 0.3)) {
+                          border = 0, point = NULL, warp = NULL, parent = NULL,
+                          weight = c(contact = 20, border = 1, position = 0.3)) {
   piece <- as.integer(interaction(as.integer(factor(group, exclude = NULL)),
                                   region_land, drop = TRUE))
   n_piece <- max(piece)
@@ -30,6 +34,9 @@ repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * 
   first <- match(seq_len(n_piece), piece)
   neighbour <- shared_border(shape, cellsize / 10) > 0 &
     outer(region_land[first], region_land[first], "==")
+  # Pieces that may swap hexagons
+  if (is.null(parent)) parent <- rep(1L, length(piece))
+  swappable <- outer(parent[first], parent[first], "==")
 
   edge <- cbind(rep(seq_along(adjacent), lengths(adjacent)), unlist(adjacent))
   edge <- edge[edge[, 1] < edge[, 2], , drop = FALSE]
@@ -64,7 +71,8 @@ repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * 
       temperature <- 5 * (1 - iter / iterations) + 0.01
       # A hexagon on a border, and a hexagon across it that touches its piece
       i <- sample.int(length(label), 1)
-      across <- adjacent[[i]][label[adjacent[[i]]] != label[i]]
+      across <- adjacent[[i]][label[adjacent[[i]]] != label[i] &
+                                swappable[label[adjacent[[i]]], label[i]]]
       if (!length(across)) next
       a <- label[i]
       b <- label[across[sample.int(length(across), 1)]]
@@ -90,10 +98,7 @@ repair_groups <- function(tile, geometry, group, region_land, iterations = 30 * 
 
   # Reallocate the regions of the pieces that changed. Reallocating from the
   # hexagons they had would compound how far they moved from their points.
-  from <- if (is.null(attr(tile, "point"))) xy else attr(tile, "point") / cellsize
-  warp <- attr(tile, "warp")
-  attr(tile, "point") <- NULL
-  attr(tile, "warp") <- NULL
+  from <- if (is.null(point)) xy else point / cellsize
   changed <- unique(c(piece[best != piece], best[best != piece]))
   if (border > 0) {
     extra <- border_cost(geometry, group, region_land, best, piece, xy, adjacent,

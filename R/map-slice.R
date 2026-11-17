@@ -9,7 +9,10 @@
 # axis and every split point is tried, preferring cuts that separate
 # neighbouring groups (weighted by the length of their shared border) along
 # the cut's direction, and that keep the pieces from becoming thin. `tree`
-# optionally fixes the splits, as a nested list of group names.
+# optionally fixes the splits of the outermost groups, as a nested list of
+# group names. With nested groups (`groups`, a data frame of levels outermost
+# first), each outer group is cut from the others before it is cut into its
+# inner groups, so the borders between groups are straight at every level.
 #
 # Smaller landmasses are placed in their direction from the largest one,
 # about two hexagons away.
@@ -17,31 +20,40 @@
 # Returns the hexagons and the hexagon of each region.
 #' @importFrom sf st_as_sfc st_bbox st_centroid st_coordinates st_make_grid
 #' @importFrom sf st_point_on_surface st_union
-slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
+slice_tiles <- function(geometry, groups, region_land, cellsize, anchor = NULL,
                         tree = NULL) {
   row_height <- cellsize * sqrt(3) / 2
   point <- st_coordinates(st_point_on_surface(geometry))
+  if (is.null(groups)) groups <- data.frame(group = rep(1L, length(geometry)))
+  n_level <- ncol(groups)
 
-  # The pieces of each group on each landmass
-  piece <- interaction(as.integer(factor(group, exclude = NULL)), region_land,
-                       drop = TRUE)
+  # The pieces of each innermost group on each landmass
+  piece <- interaction(nest_key(groups), region_land, drop = TRUE)
   region_piece <- as.integer(piece)
   first <- match(seq_len(nlevels(piece)), region_piece)
-  piece_group <- as.character(group[first])
+  piece_group <- as.character(groups[[1]][first])
+  piece_key <- lapply(seq_len(n_level), function(k) nest_key(groups, k)[first])
   piece_land <- region_land[first]
   shape <- do.call(c, lapply(split(geometry, piece), st_union))
   size <- tabulate(region_piece)
   centroid <- st_coordinates(st_centroid(shape))[, 1:2, drop = FALSE]
+  pinned <- rep(NA_integer_, length(shape))
   if (!is.null(anchor)) {
+    # Move the pieces of each anchored group (on each landmass) together
     pinned <- match(piece_group, rownames(anchor))
-    centroid[!is.na(pinned), ] <- anchor[pinned[!is.na(pinned)], , drop = FALSE]
+    for (q in split(seq_along(pinned), interaction(piece_group, piece_land, drop = TRUE))) {
+      if (is.na(pinned[q[1]])) next
+      middle <- colSums(centroid[q, , drop = FALSE] * size[q]) / sum(size[q])
+      centroid[q, ] <- sweep(centroid[q, , drop = FALSE], 2,
+                             anchor[pinned[q[1]], ] - middle, "+")
+    }
   }
   piece_box <- t(vapply(seq_along(shape), function(k) st_bbox(shape[k])[1:4],
                         numeric(4)))
   border <- shared_border(shape, cellsize / 10)
   weight <- border / max(border, 1) + 0.05
   # Anchored groups take their direction to other groups from their anchor
-  free <- if (is.null(anchor)) rep(TRUE, length(shape)) else is.na(pinned)
+  free <- is.na(pinned)
   direction <- border_direction(shape, centroid, border * outer(free, free),
                                 cellsize / 10)
 
@@ -185,10 +197,38 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
   owner_index <- function(j, p) match(owner[j], p)
   edges <- cbind(rep(seq_along(adjacent), lengths(adjacent)), unlist(adjacent))
 
-  # Cuts the cells of a node (a piece, a vector of pieces to cut automatically,
-  # or a list of nodes) between its pieces. Each cut is chosen by the score of
-  # the blocks after completing the layout below it with the best cuts by
-  # their own score, for nodes of up to 12 pieces.
+  # The pieces p as a node of the tree, cutting apart the groups of level k
+  # (and then their inner groups) automatically
+  nest_node <- function(p, k = 1) {
+    if (k >= n_level) return(p)
+    children <- lapply(unname(split(p, piece_key[[k]][p])), nest_node, k + 1)
+    auto_node(children)
+  }
+  # A node that is cut automatically between children (nodes)
+  auto_node <- function(children) {
+    if (length(children) == 1) return(children[[1]])
+    if (all(vapply(children, function(x) !is.list(x) && length(x) == 1, logical(1)))) {
+      return(unlist(children))
+    }
+    structure(children, auto = TRUE)
+  }
+  # The pieces p as a node of a tree of the outermost groups' names
+  tree_node <- function(node, p) {
+    if (is.character(node)) {
+      p <- p[piece_group[p] %in% node]
+      return(if (length(p)) nest_node(p) else NULL)
+    }
+    children <- Filter(length, lapply(node, tree_node, p))
+    if (!length(children)) return(NULL)
+    if (length(children) == 1) return(children[[1]])
+    children
+  }
+
+  # Cuts the cells of a node (a piece, a vector of pieces or a list marked
+  # auto of nodes to cut automatically, or a list of nodes) between its
+  # pieces. Each cut is chosen by the score of the blocks after completing
+  # the layout below it with the best cuts by their own score, for nodes of
+  # up to 12 pieces.
   owner <- integer(length(lattice))
   slice <- function(node, cells, look_ahead = TRUE) {
     if (!is.list(node) && length(node) == 1) {
@@ -197,14 +237,19 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
     }
     options <- list()
     for (axis in 1:2) {
-      if (is.list(node)) {
+      if (is.list(node) && !isTRUE(attr(node, "auto"))) {
         options <- c(options, list(cut_cells(node, cells, axis)))
         next
       }
-      along <- if (axis == 1) centroid[node, 1] else -centroid[node, 2]
-      sorted <- node[order(along)]
-      for (k in seq_len(length(node) - 1)) {
-        sides <- list(sorted[seq_len(k)], sorted[-seq_len(k)])
+      items <- if (is.list(node)) unclass(node) else as.list(node)
+      along <- vapply(items, function(x) {
+        x <- unlist(x)
+        xy <- colSums(centroid[x, , drop = FALSE] * size[x]) / sum(size[x])
+        if (axis == 1) xy[1] else -xy[2]
+      }, numeric(1))
+      items <- items[order(along)]
+      for (k in seq_len(length(items) - 1)) {
+        sides <- list(auto_node(items[seq_len(k)]), auto_node(items[-seq_len(k)]))
         options <- c(options, list(cut_cells(sides, cells, axis)))
       }
     }
@@ -235,7 +280,7 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
     real <- c(range(piece_box[p, c(1, 3)]), range(piece_box[p, c(2, 4)]))
     aspect <- (real[2] - real[1]) / max(real[4] - real[3], cellsize)
     middle <- colSums(centroid[p, , drop = FALSE] * size[p]) / n
-    node <- if (is.null(tree)) p else tree_pieces(tree, stats::setNames(p, piece_group[p]))
+    node <- if (is.null(tree)) nest_node(p) else tree_node(tree, p)
     if (land != lands[1]) {
       # Place the block as near as possible to its scaled position from the
       # first landmass, at least two hexagons from other blocks
@@ -301,20 +346,6 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
 rescale <- function(x, from, to) {
   if (diff(from) <= 0) return(rep(mean(to), length(x)))
   to[1] + (x - from[1]) / diff(from) * diff(to)
-}
-
-# Converts a tree of group names to a tree of pieces (named by their group),
-# dropping groups without pieces. Character vectors of several groups are
-# split automatically.
-tree_pieces <- function(node, pieces) {
-  if (is.character(node)) {
-    p <- unname(pieces[names(pieces) %in% node])
-    return(if (length(p)) p else NULL)
-  }
-  children <- Filter(length, lapply(node, tree_pieces, pieces))
-  if (!length(children)) return(NULL)
-  if (length(children) == 1) return(children[[1]])
-  children
 }
 
 # The direction from each shape to each other shape, as unit vectors. Across

@@ -23,7 +23,7 @@ library(sf)
 library(ggplot2)
 ```
 
-When regions are grouped, such as electoral divisions into states, `hexmap()` keeps the hexagons of each group together. Groups rarely need the same space in hexagons as they cover on the map: New South Wales has 46 of the 150 divisions at the 2025 Australian federal election, but only a tenth of the land, while Western Australia has a third of the land but only 16 divisions. The map has to be distorted to fit, and `layout` chooses how.
+When regions are grouped, such as electoral divisions into states, `hexmap()` keeps the hexagons of each group together. The groups are given to the layout, as in `layout_hierarchy(state)`. Groups rarely need the same space in hexagons as they cover on the map: New South Wales has 46 of the 150 divisions at the 2025 Australian federal election, but only a tenth of the land, while Western Australia has a third of the land but only 16 divisions. The map has to be distorted to fit, and the layout chooses how.
 
 Each layout keeps some things and gives up others:
 
@@ -53,10 +53,10 @@ state_map <- function(map, title) {
 ## The layouts
 
 ```{r layouts}
-hierarchy <- hexmap(election, group = state)
-diffusion <- hexmap(election, group = state, layout = layout_diffusion())
-compact <- hexmap(election, group = state, layout = layout_compact())
-slice <- hexmap(election, group = state, layout = layout_slice())
+hierarchy <- hexmap(election, layout_hierarchy(state))
+diffusion <- hexmap(election, layout_diffusion(state))
+compact <- hexmap(election, layout_compact(state))
+slice <- hexmap(election, layout_slice(state))
 ```
 
 ```{r layout-maps, echo = FALSE, fig.height = 7}
@@ -102,8 +102,7 @@ Both `layout_hierarchy()` and `layout_diffusion()` keep each group in the right 
 `layout_repair()` takes any layout and swaps hexagons across the borders between groups until groups touch as they do on the map. It fixes the ACT in the diffusion layout, and three of the five mistakes in the compact layout:
 
 ```{r repair}
-repaired <- hexmap(election, group = state,
-                   layout = layout_repair(layout_compact()))
+repaired <- hexmap(election, layout_repair(layout_compact(state)))
 ```
 
 ```{r repair-map, echo = FALSE}
@@ -152,6 +151,41 @@ sapply(list(hierarchy = hierarchy, diffusion = diffusion,
 ```
 
 Across the whole map, the hierarchy and diffusion layouts move regions by about the same distance from where they are on the map. The hierarchy layout keeps regions in order within groups, while the diffusion layout keeps more of the outline.
+
+## Nested groups
+
+Groups can be nested, outermost first and separated by `/`, to keep regions together within each group. Here, each state's divisions are split into those within 60 km of its capital city and the rest of the state:
+
+```{r nested-data}
+capitals <- data.frame(
+  state = c("NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"),
+  lon = c(151.21, 144.96, 153.03, 115.86, 138.60, 147.33, 149.13, 130.84),
+  lat = c(-33.87, -37.81, -27.47, -31.95, -34.93, -42.88, -35.28, -12.46)
+)
+capitals <- st_transform(st_as_sf(capitals, coords = c("lon", "lat"), crs = 4326), 3577)
+centre <- st_point_on_surface(st_geometry(election))
+to_capital <- st_distance(centre, capitals[match(election$state, capitals$state), ],
+                          by_element = TRUE)
+election$area <- ifelse(as.numeric(to_capital) < 60e3, "Capital city", "Rest of state")
+```
+
+Every layout keeps the hexagons of each inner group together, within the hexagons of its outer group. `layout_slice()` cuts apart the groups at every level, so all of its borders are straight. The other layouts lay out the states as before, then split each state's hexagons between its inner groups, by where their divisions were placed. `gap` can give a gap for each level, here a wide gap between states and a narrow gap within them:
+
+```{r nested, fig.width = 7, fig.height = 3.5, out.width = "100%"}
+nested <- hexmap(election, layout_hierarchy(state / area, gap = c(0.25, 0.05)))
+nested_slice <- hexmap(election, layout_slice(state / area, gap = c(0.25, 0.05)))
+```
+
+```{r nested-plot, echo = FALSE, fig.width = 7, fig.height = 3.5, out.width = "100%"}
+area_map <- function(map, title) {
+  state_map(map, title) +
+    aes(alpha = area) +
+    scale_alpha_manual(values = c("Capital city" = 1, "Rest of state" = 0.55), name = NULL)
+}
+area_map(nested, "layout_hierarchy(state / area)") +
+  area_map(nested_slice, "layout_slice(state / area)") +
+  plot_layout(guides = "collect")
+```
 
 ## Which to choose
 
