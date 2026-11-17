@@ -132,8 +132,14 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
       height <- (diff(range(row[j])) + 1) * row_height
       max(abs(log(width / height)) - log(length(members[[k]])), 0)
     }, numeric(1))
+
+    # A cut that leaves a side in pieces (e.g. zigzagging around a column of
+    # a block two hexagons wide) can't keep its groups together
+    broken <- sum(vapply(chunks, function(j) {
+      max(connected_components(adjacent, j)) - 1
+    }, numeric(1)))
     list(children = children, cells = chunks,
-         score = order_cost + shift_cost + 0.5 * mean(thin))
+         score = order_cost + shift_cost + 0.5 * mean(thin) + 10 * broken)
   }
 
   # The score of the blocks of pieces p: pairs of neighbouring pieces should
@@ -170,7 +176,11 @@ slice_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL,
       height <- (diff(range(row[j])) + 1) * row_height
       abs(log(width / height))
     }, numeric(1)))
-    turned + apart + false + shift + 0.25 * thin
+    # Pieces cut into several parts
+    broken <- sum(vapply(split(cells, own), function(j) {
+      max(connected_components(adjacent, j)) - 1
+    }, numeric(1)))
+    turned + apart + false + shift + 0.25 * thin + 10 * broken
   }
   owner_index <- function(j, p) match(owner[j], p)
   edges <- cbind(rep(seq_along(adjacent), lengths(adjacent)), unlist(adjacent))
