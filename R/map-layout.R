@@ -95,13 +95,15 @@ compact_tiles <- function(geometry, group, region_land, cellsize, anchor = NULL)
 }
 
 # The length of the border shared by each pair of shapes, within a tolerance
-#' @importFrom sf st_boundary st_buffer st_intersection st_length
+#' @importFrom sf st_boundary st_buffer st_intersection st_intersects st_length
 shared_border <- function(shape, tolerance) {
   n <- length(shape)
   boundary <- st_boundary(shape)
   near <- st_buffer(shape, tolerance)
   border <- matrix(0, n, n)
-  for (a in seq_len(n)) for (b in seq_len(n)) {
+  # Only shapes within the tolerance of each other can share a border
+  candidate <- st_intersects(near, near)
+  for (a in seq_len(n)) for (b in candidate[[a]]) {
     if (a == b) next
     border[a, b] <- sum(as.numeric(st_length(st_intersection(boundary[a], near[b]))))
   }
