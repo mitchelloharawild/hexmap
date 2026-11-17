@@ -84,3 +84,8 @@ test_that("the tree of a slice layout names outer groups, which are cut into inn
   expect_error(hexmap(election, layout_slice(state / area, tree = list("city", "country"))),
                "unknown groups")
 })
+
+test_that("groups that evaluate to NULL are no groups", {
+  group <- NULL
+  expect_equal(hexmap(election, layout_compact(group)), hexmap(election, layout_compact()))
+})

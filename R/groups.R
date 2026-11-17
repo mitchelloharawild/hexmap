@@ -44,6 +44,9 @@ eval_levels <- function(levels, data, env, n) {
       values[[label]] <- value
     }
   }
+  # Groups that evaluate to NULL (e.g. a variable `group <- NULL`) are no
+  # groups, so that code can choose whether to group
+  if (length(levels) == 1 && !length(values)) return(NULL)
   for (k in seq_along(values)) check_level(values[[k]], names(values)[k], n)
   as.data.frame(values, optional = TRUE, stringsAsFactors = FALSE)
 }

@@ -136,7 +136,8 @@
 #'   column of the map given unquoted (`state`) or as a string (`"state"`),
 #'   or as a vector with one value for each region. Nested groups are
 #'   separated by `/`, outermost first (`state / region`). See the Groups
-#'   section. Without groups, all regions form one group.
+#'   section. Without groups (or if `group` evaluates to `NULL`), all regions
+#'   form one group.
 #' @param gap The width of the gap between groups, as a fraction of the
 #'   hexagon width, from 0 to 1, or a vector with one for each level of nested
 #'   groups (outermost first). The hexagons along group borders are trimmed to
