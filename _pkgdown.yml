@@ -1,6 +1,13 @@
 url: https://pkg.mitchelloharawild.com/hexmap/
 template:
   bootstrap: 5
+  opengraph:
+    image:
+      src: pkgdown/social-card.png
+      alt: "The hexmap hex sticker"
+    twitter:
+      creator: "@mitchoharawild"
+      card: summary
 
 
 reference:
